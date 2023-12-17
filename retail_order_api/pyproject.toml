@@ -1,0 +1,24 @@
+[tool.black]
+line-length = 88
+target-version = ['py37']
+include = '\.py$'
+extend-exclude = '''
+(
+    __init__.py
+    | manage.py
+    | wsgi.py
+    | asgi.py
+    | urls.py
+    | apps.py
+    | settings.py
+    | __pycache__
+    | \.idea/
+    | \.git/
+    | venv/
+    | env/
+    | migrations/
+)
+'''
+
+[tool.isort]
+profile = "black"
