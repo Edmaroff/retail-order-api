@@ -73,9 +73,9 @@ class CustomUser(AbstractUser):
     objects = CustomUserManager()
     username_validator = UnicodeUsernameValidator()
 
-    patronymic = models.CharField(verbose_name="Отчество", max_length=150, blank=True)
-    company = models.CharField(verbose_name="Компания", max_length=40, blank=True)
-    position = models.CharField(verbose_name="Должность", max_length=40, blank=True)
+    patronymic = models.CharField(verbose_name="Отчество", max_length=150, null=True, blank=True)
+    company = models.CharField(verbose_name="Компания", max_length=40, null=True, blank=True)
+    position = models.CharField(verbose_name="Должность", max_length=40, null=True, blank=True)
     type = models.CharField(
         verbose_name="Тип пользователя",
         choices=USER_TYPE_CHOICES,
@@ -87,8 +87,8 @@ class CustomUser(AbstractUser):
         _("username"),
         max_length=150,
         unique=True,
-        blank=True,
         null=True,
+        blank=True,
         help_text=_(
             "Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."
         ),
@@ -115,6 +115,29 @@ class CustomUser(AbstractUser):
         return f"{self.first_name} {self.last_name}"
 
 
+class Contact(models.Model):
+    user = models.ForeignKey(
+        CustomUser,
+        verbose_name="Пользователь",
+        related_name="user_contacts",
+        on_delete=models.CASCADE,
+    )
+    phone = models.CharField(max_length=20, verbose_name="Телефон")
+    city = models.CharField(max_length=50, verbose_name="Город")
+    street = models.CharField(max_length=100, verbose_name="Улица")
+    house = models.CharField(max_length=15, verbose_name="Дом", null=True, blank=True)
+    structure = models.CharField(max_length=15, verbose_name="Корпус", null=True, blank=True)
+    building = models.CharField(max_length=15, verbose_name="Строение", null=True, blank=True)
+    apartment = models.CharField(max_length=15, verbose_name="Квартира", null=True, blank=True)
+
+    class Meta:
+        verbose_name = "Контакты пользователя"
+        verbose_name_plural = "Список контактов пользователя"
+
+    def __str__(self):
+        return f"{self.city} {self.street} {self.house}"
+
+
 class Shop(models.Model):
     """
     Модель для представления магазина.
@@ -128,7 +151,6 @@ class Shop(models.Model):
         verbose_name="Пользователь",
         related_name="shop",
         blank=True,
-        null=True,
         on_delete=models.CASCADE,
     )
 
@@ -188,7 +210,7 @@ class ProductInfo(models.Model):
     Модель для представления информации о продукте в магазине.
     """
 
-    model = models.CharField(max_length=80, verbose_name="Модель", blank=True)
+    model = models.CharField(max_length=80, verbose_name="Модель", null=True, blank=True)
     external_id = models.PositiveIntegerField(verbose_name="Внешний ИД")
     quantity = models.PositiveIntegerField(verbose_name="Количество")
     price = models.DecimalField(verbose_name="Цена", max_digits=10, decimal_places=2)
@@ -272,30 +294,6 @@ class ProductParameter(models.Model):
 
     def __str__(self):
         return f"{self.product_info.product.name} - {self.parameter.name}: {self.value}"
-
-
-class Contact(models.Model):
-    user = models.ForeignKey(
-        CustomUser,
-        verbose_name="Пользователь",
-        related_name="user_contacts",
-        blank=True,
-        on_delete=models.CASCADE,
-    )
-    phone = models.CharField(max_length=20, verbose_name="Телефон")
-    city = models.CharField(max_length=50, verbose_name="Город")
-    street = models.CharField(max_length=100, verbose_name="Улица")
-    house = models.CharField(max_length=15, verbose_name="Дом", blank=True)
-    structure = models.CharField(max_length=15, verbose_name="Корпус", blank=True)
-    building = models.CharField(max_length=15, verbose_name="Строение", blank=True)
-    apartment = models.CharField(max_length=15, verbose_name="Квартира", blank=True)
-
-    class Meta:
-        verbose_name = "Контакты пользователя"
-        verbose_name_plural = "Список контактов пользователя"
-
-    def __str__(self):
-        return f"{self.city} {self.street} {self.house}"
 
 
 class Order(models.Model):

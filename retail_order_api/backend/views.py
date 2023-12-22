@@ -1,24 +1,85 @@
-from django.contrib.auth.backends import ModelBackend
-from django.core.exceptions import ValidationError
-from django.core.validators import URLValidator
 from django.http import JsonResponse
-from requests import get
-from rest_framework.permissions import AllowAny, IsAuthenticated
+from rest_framework import status
+from rest_framework.permissions import IsAuthenticated
+from rest_framework.response import Response
 from rest_framework.views import APIView
-from yaml import Loader
-from yaml import load as load_yaml
 
-from backend.models import (
-    Category,
-    Contact,
-    Order,
-    OrderItem,
-    Parameter,
-    Product,
-    ProductInfo,
-    ProductParameter,
-    Shop,
-)
+from backend.models import Contact
+from backend.serializers import ContactSerializer
+
+
+class UserContactsView(APIView):
+    """Управление контактами пользователя"""
+
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        contacts = Contact.objects.filter(user=request.user)
+        serializer = ContactSerializer(contacts, many=True)
+
+        return Response({"Status": True, "Data": serializer.data})
+
+    def post(self, request):
+        request.data._mutable = True
+        request.data["user"] = request.user.id
+        request.data._mutable = False
+
+        serializer = ContactSerializer(data=request.data)
+
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {"Status": True, "Data": serializer.data},
+                status=status.HTTP_201_CREATED,
+            )
+        return Response(
+            {"Status": False, "Errors": serializer.errors},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    def patch(self, request):
+        contact_id = request.data.get("id")
+
+        if not contact_id or not contact_id.isdigit():
+            return Response(
+                {"Status": False, "Errors": "id обязательное числовое поле."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        try:
+            contact = Contact.objects.get(user=request.user, id=contact_id)
+            serializer = ContactSerializer(contact, data=request.data, partial=True)
+
+            if serializer.is_valid():
+                serializer.save()
+                return Response({"Status": True, "Data": serializer.data})
+            return Response(
+                {"Status": False, "Errors": serializer.errors},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        except Contact.DoesNotExist:
+            return Response(
+                {"Status": False, "Errors": "Контакт не найден."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+    def delete(self, request):
+        contact_id = request.data.get("id")
+
+        if not contact_id or not contact_id.isdigit():
+            return Response(
+                {"Status": False, "Errors": "id обязательное числовое поле."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            contact = Contact.objects.get(user=request.user, id=contact_id)
+            contact.delete()
+            return Response({"Status": True, "Data": "Контакт удален"})
+        except Contact.DoesNotExist:
+            return Response(
+                {"Status": False, "Errors": "Контакт не найден."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
 
 
 class TestView(APIView):
@@ -34,8 +95,6 @@ class TestView(APIView):
         )
 
     def post(self, request, *args, **kwargs):
-        permission_classes = [IsAuthenticated]
-
         print(request.data)
         return JsonResponse(
             {
