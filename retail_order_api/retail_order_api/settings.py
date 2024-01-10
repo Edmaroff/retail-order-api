@@ -45,6 +45,7 @@ INSTALLED_APPS = [
 
     "rest_framework",
     "rest_framework.authtoken",
+    "django_filters",
     "backend.apps.BackendConfig",
     "django_rest_passwordreset",
     "debug_toolbar",
@@ -59,9 +60,6 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
-
-    "debug_toolbar.middleware.DebugToolbarMiddleware",
-
 ]
 
 ROOT_URLCONF = "retail_order_api.urls"
@@ -173,10 +171,6 @@ REST_FRAMEWORK = {
     ),
 }
 
-# debug_toolbar
-INTERNAL_IPS = [
-    '127.0.0.1',
-]
 
 # SMTP
 EMAIL_BACKEND = os.getenv("EMAIL_BACKEND")
@@ -198,3 +192,8 @@ DJOSER = {
     'LOGOUT_ON_PASSWORD_CHANGE': True,  # Выход при смене пароля
     'PASSWORD_RESET_SHOW_EMAIL_NOT_FOUND': True,  # Ошибка 400 при сбросе, если email не существует
 }
+
+if DEBUG:
+    # debug_toolbar
+    MIDDLEWARE += ['debug_toolbar.middleware.DebugToolbarMiddleware']
+    INTERNAL_IPS = ['127.0.0.1']

@@ -4,7 +4,6 @@ from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
-
 STATE_CHOICES = (
     ("basket", "Статус корзины"),
     ("new", "Новый"),
@@ -73,9 +72,15 @@ class CustomUser(AbstractUser):
     objects = CustomUserManager()
     username_validator = UnicodeUsernameValidator()
 
-    patronymic = models.CharField(verbose_name="Отчество", max_length=150, null=True, blank=True)
-    company = models.CharField(verbose_name="Компания", max_length=40, null=True, blank=True)
-    position = models.CharField(verbose_name="Должность", max_length=40, null=True, blank=True)
+    patronymic = models.CharField(
+        verbose_name="Отчество", max_length=150, null=True, blank=True
+    )
+    company = models.CharField(
+        verbose_name="Компания", max_length=40, null=True, blank=True
+    )
+    position = models.CharField(
+        verbose_name="Должность", max_length=40, null=True, blank=True
+    )
     type = models.CharField(
         verbose_name="Тип пользователя",
         choices=USER_TYPE_CHOICES,
@@ -126,9 +131,15 @@ class Contact(models.Model):
     city = models.CharField(max_length=50, verbose_name="Город")
     street = models.CharField(max_length=100, verbose_name="Улица")
     house = models.CharField(max_length=15, verbose_name="Дом", null=True, blank=True)
-    structure = models.CharField(max_length=15, verbose_name="Корпус", null=True, blank=True)
-    building = models.CharField(max_length=15, verbose_name="Строение", null=True, blank=True)
-    apartment = models.CharField(max_length=15, verbose_name="Квартира", null=True, blank=True)
+    structure = models.CharField(
+        max_length=15, verbose_name="Корпус", null=True, blank=True
+    )
+    building = models.CharField(
+        max_length=15, verbose_name="Строение", null=True, blank=True
+    )
+    apartment = models.CharField(
+        max_length=15, verbose_name="Квартира", null=True, blank=True
+    )
 
     class Meta:
         verbose_name = "Контакты пользователя"
@@ -144,12 +155,13 @@ class Shop(models.Model):
     """
 
     name = models.CharField(verbose_name="Название", max_length=100)
-    url = models.URLField(verbose_name="Ссылка", null=True, blank=True)
+    url = models.URLField(verbose_name="Ссылка")
     state = models.BooleanField(verbose_name="Статус получения заказов", default=True)
     user = models.OneToOneField(
         CustomUser,
         verbose_name="Пользователь",
         related_name="shop",
+        null=True,
         blank=True,
         on_delete=models.CASCADE,
     )
@@ -168,7 +180,7 @@ class Category(models.Model):
     Модель для представления категории.
     """
 
-    name = models.CharField(verbose_name="Название", max_length=50)
+    name = models.CharField(verbose_name="Название", max_length=50, unique=True)
     shops = models.ManyToManyField(
         Shop, verbose_name="Магазины", related_name="categories", blank=True
     )
@@ -179,7 +191,7 @@ class Category(models.Model):
         ordering = ("-name",)
 
     def __str__(self):
-        return self.name
+        return f'{self.id}: {self.name}'
 
 
 class Product(models.Model):
@@ -210,7 +222,9 @@ class ProductInfo(models.Model):
     Модель для представления информации о продукте в магазине.
     """
 
-    model = models.CharField(max_length=80, verbose_name="Модель", null=True, blank=True)
+    model = models.CharField(
+        max_length=80, verbose_name="Модель", null=True, blank=True
+    )
     external_id = models.PositiveIntegerField(verbose_name="Внешний ИД")
     quantity = models.PositiveIntegerField(verbose_name="Количество")
     price = models.DecimalField(verbose_name="Цена", max_digits=10, decimal_places=2)
