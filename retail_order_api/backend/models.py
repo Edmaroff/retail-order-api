@@ -191,7 +191,7 @@ class Category(models.Model):
         ordering = ("-name",)
 
     def __str__(self):
-        return f'{self.id}: {self.name}'
+        return f"{self.name}"
 
 
 class Product(models.Model):

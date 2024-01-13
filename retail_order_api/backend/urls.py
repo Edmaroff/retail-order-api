@@ -2,20 +2,25 @@ from django.urls import include, path
 
 from backend.views import (
     CategoryListView,
+    ProductDetailView,
+    ProductListView,
+    ShopDataView,
     ShopListView,
     TestView,
     UserContactsView,
-    UserShopDetailView, ShopDataView,
+    UserShopDetailView,
 )
 
-app_name = 'backend'
+app_name = "backend"
 urlpatterns = [
-    path('', include('djoser.urls')),
-    path('', include('djoser.urls.authtoken')),
+    path("", include("djoser.urls")),
+    path("", include("djoser.urls.authtoken")),
     path("test/", TestView.as_view(), name="test"),
     path("users/me/contacts/", UserContactsView.as_view(), name="user_contacts"),
     path("categories/", CategoryListView.as_view(), name="categories"),
     path("shops/", ShopListView.as_view(), name="shops_list"),
-    path("users/me/shops/", UserShopDetailView.as_view(), name="user_shops"),
-    path("users/me/shops/data/", ShopDataView.as_view(), name="shops_data"),
+    path("users/me/shop/", UserShopDetailView.as_view(), name="user_shops"),
+    path("users/me/shop/data/", ShopDataView.as_view(), name="shops_data"),
+    path("products/", ProductListView.as_view(), name="products"),
+    path("products/detail/", ProductDetailView.as_view(), name="products_detail"),
 ]

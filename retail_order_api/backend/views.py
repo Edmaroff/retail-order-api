@@ -1,7 +1,9 @@
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 from django.db import IntegrityError
+from django.db.models import Q
 from django.http import JsonResponse
+from django_filters import rest_framework
 from requests import get
 from rest_framework import filters, generics, permissions, status, views
 from rest_framework.response import Response
@@ -9,6 +11,7 @@ from yaml import SafeLoader
 from yaml import load as load_yaml
 from yaml.error import YAMLError
 
+from backend.filters import ProductFilter
 from backend.models import (
     Category,
     Contact,
@@ -18,11 +21,13 @@ from backend.models import (
     ProductParameter,
     Shop,
 )
-from backend.pagination import CategoryPagination, ShopPagination
+from backend.pagination import CategoryPagination, ProductPagination, ShopPagination
 from backend.permissions import IsAuthenticatedAndShopUser
 from backend.serializers import (
     CategoryListSerializer,
     ContactSerializer,
+    ProductInfoSerializer,
+    ProductListSerializer,
     ShopCreateUpdateSerializer,
     ShopDetailSerializer,
     ShopListSerializer,
@@ -203,29 +208,6 @@ class CategoryListView(generics.ListAPIView):
     search_fields = ["name"]
 
 
-class TestView(views.APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get(self, request, *args, **kwargs):
-        return JsonResponse(
-            {
-                "Status": True,
-                "HTTP_Method": request.method,
-                "HTTP_Headers": dict(request.headers),
-            }
-        )
-
-    def post(self, request, *args, **kwargs):
-        print(request.data)
-        return JsonResponse(
-            {
-                "Status": True,
-                "HTTP_Method": request.method,
-                "HTTP_Headers": dict(request.headers),
-            }
-        )
-
-
 class ShopDataView(views.APIView):
     """Загрузка и выгрузка товаров магазина."""
 
@@ -265,7 +247,7 @@ class ShopDataView(views.APIView):
             "goods": [],
         }
 
-        # Обработка информации о продуктах
+        # Обработка информации о товарах
         products_info = ProductInfo.objects.filter(shop=shop)
         for product_info in products_info:
             product_data = {
@@ -279,7 +261,7 @@ class ShopDataView(views.APIView):
                 "parameters": {},
             }
 
-            # Обработка параметров продукта
+            # Обработка параметров товара
             products_parameter = ProductParameter.objects.filter(
                 product_info=product_info
             )
@@ -326,23 +308,23 @@ class ShopDataView(views.APIView):
 
             # Обработка категорий
             shop.categories.clear()  # Удаление существующих категорий
-            category_name_to_id = {}  # Для создания продуктов
+            category_name_to_id = {}  # Для создания товаров
             categories_data = data.get("categories", [])
             for category_name in categories_data:
                 category_object, _ = Category.objects.get_or_create(name=category_name)
                 category_object.shops.add(shop.id)
                 category_name_to_id[category_name] = category_object.id
 
-            # Обработка продуктов
+            # Обработка товаров
             ProductInfo.objects.filter(
                 shop_id=shop.id
-            ).delete()  # Удаление существующих продуктов магазина
+            ).delete()  # Удаление существующих товаров магазина
             products_data = data.get("goods", [])
             for product_data in products_data:
-                # Попытка получить продукт, если его нет — создание
+                # Попытка получить товар, если его нет — создание
                 try:
                     product = Product.objects.get(name=product_data.get("name"))
-                    # Проверка связи категории продукта с магазином
+                    # Проверка связи категории товара с магазином
                     if product.category.name not in category_name_to_id:
                         product.category.shops.add(shop.id)
                 except Product.DoesNotExist:
@@ -351,7 +333,7 @@ class ShopDataView(views.APIView):
                         name=product_data.get("name"), category_id=category_id
                     )
 
-                # Обработка информации о продукте
+                # Обработка информации о товаре
                 product_info = ProductInfo.objects.create(
                     product_id=product.id,
                     shop_id=shop.id,
@@ -362,7 +344,7 @@ class ShopDataView(views.APIView):
                     quantity=product_data.get("quantity"),
                 )
 
-                # Обработка параметров продукта
+                # Обработка параметров товара
                 parameters_data = product_data.get("parameters", {})
                 for param_name, param_value in parameters_data.items():
                     parameter, _ = Parameter.objects.get_or_create(name=param_name)
@@ -378,3 +360,70 @@ class ShopDataView(views.APIView):
                 {"Status": False, "Errors": "Не указаны все необходимые аргументы."},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+
+class ProductListView(generics.ListAPIView):
+    """Получение списка товаров."""
+
+    queryset = Product.objects.all()
+    serializer_class = ProductListSerializer
+    pagination_class = ProductPagination
+    filter_backends = [rest_framework.DjangoFilterBackend]
+    filterset_class = ProductFilter
+
+
+class ProductDetailView(views.APIView, ProductPagination):
+    """Получение подробной информации о товарах на основе заданных фильтров."""
+
+    pagination_class = ProductPagination
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        query = Q(shop__state=True)
+
+        shop_id = request.query_params.get("shop_id")
+        category_id = request.query_params.get("category_id")
+        product = request.query_params.get("product")
+
+        if shop_id:
+            query = query & Q(shop_id=shop_id)
+        if category_id:
+            query = query & Q(product__category_id=category_id)
+        if product:
+            query = query & Q(product__name__icontains=product)
+
+        # Фильтруем и отбрасываем дубликаты
+        queryset = (
+            ProductInfo.objects.filter(query)
+            .select_related("shop", "product__category")
+            .prefetch_related("product_parameters__parameter")
+            .distinct()
+        )
+
+        # Обработка пагинации
+        paginated_queryset = self.paginate_queryset(queryset, request)
+        serializer = ProductInfoSerializer(paginated_queryset, many=True)
+        return self.get_paginated_response(serializer.data)
+
+
+class TestView(views.APIView):
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, *args, **kwargs):
+        return JsonResponse(
+            {
+                "Status": True,
+                "HTTP_Method": request.method,
+                "HTTP_Headers": dict(request.headers),
+            }
+        )
+
+    def post(self, request, *args, **kwargs):
+        print(request.data)
+        return JsonResponse(
+            {
+                "Status": True,
+                "HTTP_Method": request.method,
+                "HTTP_Headers": dict(request.headers),
+            }
+        )

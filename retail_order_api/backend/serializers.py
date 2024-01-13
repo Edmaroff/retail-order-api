@@ -1,6 +1,14 @@
 from rest_framework import serializers
 
-from backend.models import Category, Contact, CustomUser, Shop
+from backend.models import (
+    Category,
+    Contact,
+    CustomUser,
+    Product,
+    ProductInfo,
+    ProductParameter,
+    Shop,
+)
 
 
 class ContactSerializer(serializers.ModelSerializer):
@@ -70,4 +78,41 @@ class ShopListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Shop
         fields = ["id", "name"]
+        read_only_fields = ["id"]
+
+
+class ProductListSerializer(serializers.ModelSerializer):
+    category = serializers.StringRelatedField()
+
+    class Meta:
+        model = Product
+        fields = ["id", "name", "category"]
+        read_only_fields = ["id"]
+
+
+class ProductParameterSerializer(serializers.ModelSerializer):
+    parameter = serializers.StringRelatedField()
+
+    class Meta:
+        model = ProductParameter
+        fields = ["parameter", "value"]
+
+
+class ProductInfoSerializer(serializers.ModelSerializer):
+    product = ProductListSerializer(read_only=True)
+    product_parameters = ProductParameterSerializer(read_only=True, many=True)
+
+    class Meta:
+        model = ProductInfo
+        fields = [
+            "id",
+            "model",
+            "external_id",
+            "quantity",
+            "price",
+            "price_rrp",
+            "product",
+            "shop",
+            "product_parameters",
+        ]
         read_only_fields = ["id"]
