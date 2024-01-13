@@ -155,7 +155,7 @@ class Shop(models.Model):
     """
 
     name = models.CharField(verbose_name="Название", max_length=100)
-    url = models.URLField(verbose_name="Ссылка")
+    url = models.URLField(verbose_name="Ссылка", null=True, blank=True)
     state = models.BooleanField(verbose_name="Статус получения заказов", default=True)
     user = models.OneToOneField(
         CustomUser,
@@ -199,7 +199,7 @@ class Product(models.Model):
     Модель для представления продукта.
     """
 
-    name = models.CharField(verbose_name="Название", max_length=90)
+    name = models.CharField(verbose_name="Название", max_length=90, unique=True)
     category = models.ForeignKey(
         Category,
         verbose_name="Категория",
@@ -265,7 +265,7 @@ class Parameter(models.Model):
     Модель для представления параметра.
     """
 
-    name = models.CharField(max_length=50, verbose_name="Название")
+    name = models.CharField(max_length=50, unique=True, verbose_name="Название")
 
     class Meta:
         verbose_name = "Параметр"
