@@ -1,10 +1,7 @@
-import os
-
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 from django.db import IntegrityError
-from django.http import JsonResponse, QueryDict
-from django.shortcuts import get_object_or_404
+from django.http import JsonResponse
 from requests import get
 from rest_framework import filters, generics, permissions, status, views
 from rest_framework.response import Response
@@ -231,6 +228,7 @@ class TestView(views.APIView):
 
 class ShopDataView(views.APIView):
     """Загрузка и выгрузка товаров магазина."""
+
     permission_classes = [IsAuthenticatedAndShopUser]
 
     @staticmethod
@@ -249,6 +247,50 @@ class ShopDataView(views.APIView):
                 {"Status": False, "Errors": str(error)},
                 status=status.HTTP_400_BAD_REQUEST,
             )
+
+    def get(self, request, *args, **kwargs):
+        shop = Shop.objects.filter(user=request.user).first()
+
+        if not shop:
+            return Response(
+                {"Status": False, "Errors": "Магазин не найден."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        # Данные для выгрузки
+        categories = list(shop.categories.values_list("name", flat=True))
+        data = {
+            "shop_name": shop.name,
+            "categories": categories,
+            "goods": [],
+        }
+
+        # Обработка информации о продуктах
+        products_info = ProductInfo.objects.filter(shop=shop)
+        for product_info in products_info:
+            product_data = {
+                "id": product_info.external_id,
+                "category": product_info.product.category.name,
+                "name": product_info.product.name,
+                "model": product_info.model,
+                "price": product_info.price,
+                "price_rrp": product_info.price_rrp,
+                "quantity": product_info.quantity,
+                "parameters": {},
+            }
+
+            # Обработка параметров продукта
+            products_parameter = ProductParameter.objects.filter(
+                product_info=product_info
+            )
+            for product_parameter in products_parameter:
+                product_data["parameters"][
+                    product_parameter.parameter.name
+                ] = product_parameter.value
+
+            data["goods"].append(product_data)
+
+        return Response({"Status": True, "Data": data})
 
     def post(self, request, *args, **kwargs):
         url = request.data.get("url")
@@ -270,6 +312,7 @@ class ShopDataView(views.APIView):
 
         try:
             # # ОТЛАДКА - чтение файла с ПК
+            # import os
             # url = "http://www.exmple100.ru"
             # stream = os.path.join(os.getcwd(), "data/shop_1.yaml")
             # with open(stream, encoding="utf-8") as file:
@@ -330,7 +373,7 @@ class ShopDataView(views.APIView):
                     )
 
             return Response({"Status": True, "Message": "Магазин успешно обновлен."})
-        except IntegrityError as error:
+        except IntegrityError:
             return Response(
                 {"Status": False, "Errors": "Не указаны все необходимые аргументы."},
                 status=status.HTTP_400_BAD_REQUEST,
