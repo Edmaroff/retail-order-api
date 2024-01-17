@@ -1,6 +1,7 @@
 from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.validators import UnicodeUsernameValidator
+from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
 
@@ -18,6 +19,10 @@ USER_TYPE_CHOICES = (
     ("shop", "Магазин"),
     ("buyer", "Покупатель"),
 )
+
+DEFAULT_QUANTITY_ORDER_ITEM = 1
+MIN_QUANTITY_ORDER_ITEM = 1
+MAX_QUANTITY_ORDER_ITEM = 100
 
 
 class CustomUserManager(BaseUserManager):
@@ -322,7 +327,12 @@ class Order(models.Model):
         on_delete=models.CASCADE,
     )
     contact = models.ForeignKey(
-        Contact, verbose_name="Контакт", related_name="orders", on_delete=models.CASCADE
+        Contact,
+        verbose_name="Контакт",
+        related_name="orders",
+        blank=True,
+        null=True,
+        on_delete=models.CASCADE,
     )
     date = models.DateTimeField(verbose_name="Дата и время заказа", auto_now_add=True)
     state = models.CharField(
@@ -339,6 +349,8 @@ class Order(models.Model):
 
 
 class OrderItem(models.Model):
+    """Модель для представления товара в заказе."""
+
     order = models.ForeignKey(
         Order,
         verbose_name="Заказ",
@@ -349,10 +361,17 @@ class OrderItem(models.Model):
     product_info = models.ForeignKey(
         ProductInfo,
         verbose_name="Информация о продукте",
-        related_name="ordered_items",
+        related_name="ordered_items_info",
         on_delete=models.CASCADE,
     )
-    quantity = models.PositiveIntegerField(verbose_name="Количество")
+    quantity = models.PositiveIntegerField(
+        verbose_name="Количество",
+        validators=[
+            MinValueValidator(MIN_QUANTITY_ORDER_ITEM),
+            MaxValueValidator(MAX_QUANTITY_ORDER_ITEM),
+        ],
+        default=DEFAULT_QUANTITY_ORDER_ITEM,
+    )
 
     class Meta:
         verbose_name = "Заказанный товар"

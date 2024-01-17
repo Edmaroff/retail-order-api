@@ -1,9 +1,12 @@
 from rest_framework import serializers
 
 from backend.models import (
+    DEFAULT_QUANTITY_ORDER_ITEM,
     Category,
     Contact,
     CustomUser,
+    Order,
+    OrderItem,
     Product,
     ProductInfo,
     ProductParameter,
@@ -116,3 +119,49 @@ class ProductInfoSerializer(serializers.ModelSerializer):
             "product_parameters",
         ]
         read_only_fields = ["id"]
+
+
+class OrderItemSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = OrderItem
+        fields = ["id", "product_info", "quantity", "order"]
+        read_only_fields = ["id"]
+        extra_kwargs = {"order": {"write_only": True}}
+
+    def validate(self, data):
+        requested_quantity = data.get("quantity", DEFAULT_QUANTITY_ORDER_ITEM)
+        available_quantity = data.get("product_info").quantity
+
+        if requested_quantity > available_quantity:
+            raise serializers.ValidationError(
+                {
+                    "quantity": f"Превышено доступное количество товара — {available_quantity}.",
+                    "product_info": data.get("product_info").pk,
+                }
+            )
+        return data
+
+
+class OrderItemCreateSerializer(OrderItemSerializer):
+    product_info = ProductInfoSerializer(read_only=True)
+
+
+class OrderSerializer(serializers.ModelSerializer):
+    ordered_items = OrderItemCreateSerializer(read_only=True, many=True)
+    total_sum = serializers.SerializerMethodField()
+    contact = ContactSerializer(read_only=True)
+
+    class Meta:
+        model = Order
+        fields = ["id", "ordered_items", "state", "date", "total_sum", "contact"]
+        read_only_fields = ["id"]
+
+    def get_total_sum(self, obj):
+        # Общая сумма корзины
+        total_sum = sum(
+            [
+                order_item.product_info.price * order_item.quantity
+                for order_item in obj.ordered_items.all()
+            ]
+        )
+        return total_sum

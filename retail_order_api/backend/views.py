@@ -1,12 +1,13 @@
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
-from django.db import IntegrityError
+from django.db import IntegrityError, transaction
 from django.db.models import Q
 from django.http import JsonResponse
 from django_filters import rest_framework
 from requests import get
 from rest_framework import filters, generics, permissions, status, views
 from rest_framework.response import Response
+from ujson import loads as load_json
 from yaml import SafeLoader
 from yaml import load as load_yaml
 from yaml.error import YAMLError
@@ -15,6 +16,8 @@ from backend.filters import ProductFilter
 from backend.models import (
     Category,
     Contact,
+    Order,
+    OrderItem,
     Parameter,
     Product,
     ProductInfo,
@@ -22,10 +25,12 @@ from backend.models import (
     Shop,
 )
 from backend.pagination import CategoryPagination, ProductPagination, ShopPagination
-from backend.permissions import IsAuthenticatedAndShopUser
+from backend.permissions import IsAuthenticatedAndBuyerUser, IsAuthenticatedAndShopUser
 from backend.serializers import (
     CategoryListSerializer,
     ContactSerializer,
+    OrderItemSerializer,
+    OrderSerializer,
     ProductInfoSerializer,
     ProductListSerializer,
     ShopCreateUpdateSerializer,
@@ -277,7 +282,8 @@ class ShopDataView(views.APIView):
     def post(self, request, *args, **kwargs):
         url = request.data.get("url")
         check_url = self._process_url(url)
-        if check_url is not None:
+
+        if isinstance(check_url, Response):
             return check_url
 
         try:
@@ -291,75 +297,85 @@ class ShopDataView(views.APIView):
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
+        with transaction.atomic():
+            try:
+                # # ОТЛАДКА - чтение файла с ПК
+                # import os
+                # url = "http://www.exmple100.ru"
+                # stream = os.path.join(os.getcwd(), "data/shop_1.yaml")
+                # with open(stream, encoding="utf-8") as file:
+                #     data = load_yaml(file, Loader=SafeLoader)
+                # # ОТЛАДКА - чтение файла с ПК
 
-        try:
-            # # ОТЛАДКА - чтение файла с ПК
-            # import os
-            # url = "http://www.exmple100.ru"
-            # stream = os.path.join(os.getcwd(), "data/shop_1.yaml")
-            # with open(stream, encoding="utf-8") as file:
-            #     data = load_yaml(file, Loader=SafeLoader)
-            # # ОТЛАДКА - чтение файла с ПК
-
-            # Создание или обновление магазина
-            shop, _ = Shop.objects.update_or_create(
-                user=request.user, defaults={"name": data.get("shop_name"), "url": url}
-            )
-
-            # Обработка категорий
-            shop.categories.clear()  # Удаление существующих категорий
-            category_name_to_id = {}  # Для создания товаров
-            categories_data = data.get("categories", [])
-            for category_name in categories_data:
-                category_object, _ = Category.objects.get_or_create(name=category_name)
-                category_object.shops.add(shop.id)
-                category_name_to_id[category_name] = category_object.id
-
-            # Обработка товаров
-            ProductInfo.objects.filter(
-                shop_id=shop.id
-            ).delete()  # Удаление существующих товаров магазина
-            products_data = data.get("goods", [])
-            for product_data in products_data:
-                # Попытка получить товар, если его нет — создание
-                try:
-                    product = Product.objects.get(name=product_data.get("name"))
-                    # Проверка связи категории товара с магазином
-                    if product.category.name not in category_name_to_id:
-                        product.category.shops.add(shop.id)
-                except Product.DoesNotExist:
-                    category_id = category_name_to_id.get(product_data.get("category"))
-                    product = Product.objects.create(
-                        name=product_data.get("name"), category_id=category_id
-                    )
-
-                # Обработка информации о товаре
-                product_info = ProductInfo.objects.create(
-                    product_id=product.id,
-                    shop_id=shop.id,
-                    external_id=product_data.get("id"),
-                    model=product_data.get("model"),
-                    price=product_data.get("price"),
-                    price_rrp=product_data.get("price_rrp"),
-                    quantity=product_data.get("quantity"),
+                # Создание или обновление магазина
+                shop, _ = Shop.objects.update_or_create(
+                    user=request.user,
+                    defaults={"name": data.get("shop_name"), "url": url},
                 )
 
-                # Обработка параметров товара
-                parameters_data = product_data.get("parameters", {})
-                for param_name, param_value in parameters_data.items():
-                    parameter, _ = Parameter.objects.get_or_create(name=param_name)
-                    ProductParameter.objects.create(
-                        product_info_id=product_info.id,
-                        parameter=parameter,
-                        value=param_value,
+                # Обработка категорий
+                shop.categories.clear()  # Удаление существующих категорий
+                category_name_to_id = {}  # Для создания товаров
+                categories_data = data.get("categories", [])
+                for category_name in categories_data:
+                    category_object, _ = Category.objects.get_or_create(
+                        name=category_name
+                    )
+                    category_object.shops.add(shop.id)
+                    category_name_to_id[category_name] = category_object.id
+
+                # Обработка товаров
+                ProductInfo.objects.filter(
+                    shop_id=shop.id
+                ).delete()  # Удаление существующих товаров магазина
+                products_data = data.get("goods", [])
+                for product_data in products_data:
+                    # Попытка получить товар, если его нет — создание
+                    try:
+                        product = Product.objects.get(name=product_data.get("name"))
+                        # Проверка связи категории товара с магазином
+                        if product.category.name not in category_name_to_id:
+                            product.category.shops.add(shop.id)
+                    except Product.DoesNotExist:
+                        category_id = category_name_to_id.get(
+                            product_data.get("category")
+                        )
+                        product = Product.objects.create(
+                            name=product_data.get("name"), category_id=category_id
+                        )
+
+                    # Обработка информации о товаре
+                    product_info = ProductInfo.objects.create(
+                        product_id=product.id,
+                        shop_id=shop.id,
+                        external_id=product_data.get("id"),
+                        model=product_data.get("model"),
+                        price=product_data.get("price"),
+                        price_rrp=product_data.get("price_rrp"),
+                        quantity=product_data.get("quantity"),
                     )
 
-            return Response({"Status": True, "Message": "Магазин успешно обновлен."})
-        except IntegrityError:
-            return Response(
-                {"Status": False, "Errors": "Не указаны все необходимые аргументы."},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
+                    # Обработка параметров товара
+                    parameters_data = product_data.get("parameters", {})
+                    for param_name, param_value in parameters_data.items():
+                        parameter, _ = Parameter.objects.get_or_create(name=param_name)
+                        ProductParameter.objects.create(
+                            product_info_id=product_info.id,
+                            parameter=parameter,
+                            value=param_value,
+                        )
+
+                return Response(
+                    {"Status": True, "Message": "Магазин успешно обновлен."}
+                )
+            except IntegrityError:
+                return Response(
+                    {
+                        "Status": False,
+                        "Errors": "Не указаны все необходимые аргументы.",
+                    },
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
 
 
 class ProductListView(generics.ListAPIView):
@@ -404,6 +420,202 @@ class ProductDetailView(views.APIView, ProductPagination):
         paginated_queryset = self.paginate_queryset(queryset, request)
         serializer = ProductInfoSerializer(paginated_queryset, many=True)
         return self.get_paginated_response(serializer.data)
+
+
+class BasketView(views.APIView):
+    """Управление корзиной пользователя."""
+
+    permission_classes = [IsAuthenticatedAndBuyerUser]
+
+    @staticmethod
+    def _process_items(items):
+        if not items:
+            return Response(
+                {
+                    "status": False,
+                    "errors": "Необходимо передать список товаров items.",
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+        if isinstance(items, str):
+            try:
+                items = load_json(items)
+            except ValueError:
+                return Response(
+                    {"Status": False, "Errors": "Неверный формат запроса"},
+                    status=status.HTTP_400_BAD_REQUEST,
+                )
+        if not isinstance(items, list):
+            return Response(
+                {"status": False, "errors": "items должен быть списком"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        return items
+
+    def get(self, request, *args, **kwargs):
+        basket = (
+            Order.objects.filter(user_id=request.user.id, state="basket")
+            .prefetch_related(
+                "ordered_items__product_info__product__category",
+                "ordered_items__product_info__product_parameters__parameter",
+            )
+            .distinct()
+        )
+
+        if not basket:
+            return Response(
+                {"Status": False, "Errors": "Корзина не найдена"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = OrderSerializer(basket, many=True)
+        return Response(serializer.data)
+
+    def post(self, request, *args, **kwargs):
+        items = request.data.get("items")
+        items = self._process_items(items)
+        if isinstance(items, Response):
+            return items
+
+        with transaction.atomic():
+            order, _ = Order.objects.get_or_create(
+                user_id=request.user.id, state="basket"
+            )
+            objects_created = 0
+            for order_item_data in items:
+                order_item_data["order"] = order.id
+                serializer = OrderItemSerializer(data=order_item_data)
+
+                if serializer.is_valid():
+                    try:
+                        serializer.save()
+                        objects_created += 1
+                    except IntegrityError as error:
+                        return Response(
+                            {"Status": False, "Errors": str(error)},
+                            status=status.HTTP_400_BAD_REQUEST,
+                        )
+                else:
+                    transaction.set_rollback(True)  # Откатываем транзакцию
+                    return Response(
+                        {"Status": False, "Errors": serializer.errors},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+        return Response(
+            {"Status": True, "Создано объектов": objects_created},
+            status=status.HTTP_201_CREATED,
+        )
+
+    def patch(self, request, *args, **kwargs):
+        items = request.data.get("items")
+        items = self._process_items(items)
+        if isinstance(items, Response):
+            return items
+
+        try:
+            order = Order.objects.get(user_id=request.user.id, state="basket")
+        except Order.DoesNotExist:
+            return Response(
+                {"Status": False, "Errors": "Корзина не найдена"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        objects_updated = 0
+        with transaction.atomic():
+            for basket_item in items:
+                order_item_id = basket_item.get("id")
+                new_quantity = basket_item.get("quantity")
+
+                # Проверка передаваемых данные
+                if not (
+                    isinstance(order_item_id, int) and isinstance(new_quantity, int)
+                ):
+                    transaction.set_rollback(True)  # Откатываем транзакцию
+                    return Response(
+                        {"Status": False, "Errors": "Неверный формат данных"},
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+                try:
+                    order_item = OrderItem.objects.select_related("product_info").get(
+                        id=order_item_id, order=order
+                    )
+                except OrderItem.DoesNotExist:
+                    transaction.set_rollback(True)  # Откатываем транзакцию
+                    return Response(
+                        {
+                            "Status": False,
+                            "Errors": f"Товар с id {order_item_id} не найден в корзине",
+                        },
+                        status=status.HTTP_404_NOT_FOUND,
+                    )
+
+                # Проверка доступного количества в магазине
+                available_quantity = order_item.product_info.quantity
+                if new_quantity > available_quantity:
+                    transaction.set_rollback(True)  # Откатываем транзакцию
+                    return Response(
+                        {
+                            "Status": False,
+                            "Errors": {
+                                "quantity": [
+                                    f"Превышено доступное количество товара — {available_quantity}."
+                                ],
+                                "id": [order_item_id],
+                            },
+                        },
+                        status=status.HTTP_400_BAD_REQUEST,
+                    )
+
+                order_item.quantity = new_quantity
+                order_item.save()
+                objects_updated += 1
+
+            return Response({"Status": True, "Обновлено объектов": objects_updated})
+
+    def delete(self, request, *args, **kwargs):
+        order_item_ids = request.data.get("items")
+
+        if not order_item_ids:
+            return Response(
+                {"Status": False, "Errors": "Не переданы ID товаров для удаления"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            if isinstance(order_item_ids, str) and "," in order_item_ids:
+                order_item_ids = [
+                    int(cat_id.strip()) for cat_id in order_item_ids.split(",")
+                ]
+            else:
+                order_item_ids = [int(order_item_ids)]
+        except ValueError:
+            return Response(
+                {"Status": False, "Errors": "items должен быть списком чисел"},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            order = Order.objects.get(user_id=request.user.id, state="basket")
+        except Order.DoesNotExist:
+            return Response(
+                {"Status": False, "Errors": "Корзина не найдена"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        deleted_count, _ = OrderItem.objects.filter(
+            order_id=order.id, id__in=order_item_ids
+        ).delete()
+
+        if deleted_count == 0:
+            return Response(
+                {"Status": False, "Errors": "Не найдены товары для удаления"},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        return Response({"Status": True, "Удалено товаров": deleted_count})
 
 
 class TestView(views.APIView):

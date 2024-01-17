@@ -48,7 +48,6 @@ INSTALLED_APPS = [
     "django_filters",
     "backend.apps.BackendConfig",
     "django_rest_passwordreset",
-    "debug_toolbar",
     "djoser",
 ]
 
@@ -194,6 +193,8 @@ DJOSER = {
 }
 
 if DEBUG:
-    # debug_toolbar
-    MIDDLEWARE += ['debug_toolbar.middleware.DebugToolbarMiddleware']
+    # debug_toolbar, silk
+    MIDDLEWARE += ['debug_toolbar.middleware.DebugToolbarMiddleware',
+                   'silk.middleware.SilkyMiddleware',]
+    INSTALLED_APPS += ['debug_toolbar', 'silk']
     INTERNAL_IPS = ['127.0.0.1']

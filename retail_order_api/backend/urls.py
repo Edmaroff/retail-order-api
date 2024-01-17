@@ -1,6 +1,7 @@
 from django.urls import include, path
 
 from backend.views import (
+    BasketView,
     CategoryListView,
     ProductDetailView,
     ProductListView,
@@ -23,4 +24,5 @@ urlpatterns = [
     path("users/me/shop/data/", ShopDataView.as_view(), name="shops_data"),
     path("products/", ProductListView.as_view(), name="products"),
     path("products/detail/", ProductDetailView.as_view(), name="products_detail"),
+    path('basket/', BasketView.as_view(), name='basket'),
 ]
