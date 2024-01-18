@@ -3,6 +3,7 @@ from django.urls import include, path
 from backend.views import (
     BasketView,
     CategoryListView,
+    OrderView,
     ProductDetailView,
     ProductListView,
     ShopDataView,
@@ -25,4 +26,5 @@ urlpatterns = [
     path("products/", ProductListView.as_view(), name="products"),
     path("products/detail/", ProductDetailView.as_view(), name="products_detail"),
     path('basket/', BasketView.as_view(), name='basket'),
+    path('order/', OrderView.as_view(), name='order'),
 ]

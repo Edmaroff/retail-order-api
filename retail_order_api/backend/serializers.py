@@ -4,7 +4,6 @@ from backend.models import (
     DEFAULT_QUANTITY_ORDER_ITEM,
     Category,
     Contact,
-    CustomUser,
     Order,
     OrderItem,
     Product,
