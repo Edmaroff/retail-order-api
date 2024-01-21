@@ -152,7 +152,7 @@ class UserShopDetailView(views.APIView):
             return Response(
                 {
                     "Status": False,
-                    "Message": "У пользователя уже существует магазин",
+                    "Message": "У пользователя уже существует магазин.",
                     "Data": serializer.data,
                 }
             )
@@ -164,7 +164,7 @@ class UserShopDetailView(views.APIView):
         if serializer.is_valid():
             serializer.save()
             return Response(
-                {"Status": True, "Message": "Магазин создан", "Data": serializer.data},
+                {"Status": True, "Message": "Магазин создан.", "Data": serializer.data},
                 status=status.HTTP_201_CREATED,
             )
         return Response(
@@ -279,8 +279,6 @@ class ShopDataView(views.APIView):
 
         return Response({"Status": True, "Data": data})
 
-    """ОСНОВНОЙ МЕТОД!!!"""
-
     def post(self, request, *args, **kwargs):
         url = request.data.get("url")
         check_url = self._process_url(url)
@@ -295,7 +293,7 @@ class ShopDataView(views.APIView):
             return Response(
                 {
                     "Status": False,
-                    "Errors": f"Ошибка при загрузке данных из файла YAML",
+                    "Errors": f"Ошибка при загрузке данных из файла YAML.",
                 },
                 status=status.HTTP_400_BAD_REQUEST,
             )
@@ -374,109 +372,10 @@ class ShopDataView(views.APIView):
                 return Response(
                     {
                         "Status": False,
-                        "Errors": "Не указаны все необходимые аргументы",
+                        "Errors": "Не указаны все необходимые аргументы.",
                     },
                     status=status.HTTP_400_BAD_REQUEST,
                 )
-
-    """Чтение файла с ПК"""
-    # def post(self, request, *args, **kwargs):
-    #     url = request.data.get("url")
-    #     check_url = self._process_url(url)
-    #
-    #     if isinstance(check_url, Response):
-    #         return check_url
-    #
-    #     # try:
-    #     #     stream = get(url).content
-    #     #     data = load_yaml(stream, Loader=SafeLoader)
-    #     # except YAMLError:
-    #     #     return Response(
-    #     #         {
-    #     #             "Status": False,
-    #     #             "Errors": f"Ошибка при загрузке данных из файла YAML",
-    #     #         },
-    #     #         status=status.HTTP_400_BAD_REQUEST,
-    #     #     )
-    #     with transaction.atomic():
-    #         try:
-    #             # # ОТЛАДКА - чтение файла с ПК
-    #             import os
-    #             url = "http://www.exmple100.ru"
-    #             stream = os.path.join(os.getcwd(), "data/shop_test.yaml")
-    #             with open(stream, encoding="utf-8") as file:
-    #                 data = load_yaml(file, Loader=SafeLoader)
-    #             # # ОТЛАДКА - чтение файла с ПК
-    #
-    #                 # Создание или обновление магазина
-    #                 shop, _ = Shop.objects.update_or_create(
-    #                     user=request.user,
-    #                     defaults={"name": data.get("shop_name"), "url": url},
-    #                 )
-    #
-    #                 # Обработка категорий
-    #                 shop.categories.clear()  # Удаление существующих категорий
-    #                 category_name_to_id = {}  # Для создания товаров
-    #                 categories_data = data.get("categories", [])
-    #                 for category_name in categories_data:
-    #                     category_object, _ = Category.objects.get_or_create(
-    #                         name=category_name
-    #                     )
-    #                     category_object.shops.add(shop.id)
-    #                     category_name_to_id[category_name] = category_object.id
-    #
-    #                 # Обработка товаров
-    #                 ProductInfo.objects.filter(
-    #                     shop_id=shop.id
-    #                 ).delete()  # Удаление существующих товаров магазина
-    #                 products_data = data.get("goods", [])
-    #                 for product_data in products_data:
-    #                     # Попытка получить товар, если его нет — создание
-    #                     try:
-    #                         product = Product.objects.get(name=product_data.get("name"))
-    #                         # Проверка связи категории товара с магазином
-    #                         if product.category.name not in category_name_to_id:
-    #                             product.category.shops.add(shop.id)
-    #                     except Product.DoesNotExist:
-    #                         category_id = category_name_to_id.get(
-    #                             product_data.get("category")
-    #                         )
-    #                         product = Product.objects.create(
-    #                             name=product_data.get("name"), category_id=category_id
-    #                         )
-    #
-    #                     # Обработка информации о товаре
-    #                     product_info = ProductInfo.objects.create(
-    #                         product_id=product.id,
-    #                         shop_id=shop.id,
-    #                         external_id=product_data.get("id"),
-    #                         model=product_data.get("model"),
-    #                         price=product_data.get("price"),
-    #                         price_rrp=product_data.get("price_rrp"),
-    #                         quantity=product_data.get("quantity"),
-    #                     )
-    #
-    #                     # Обработка параметров товара
-    #                     parameters_data = product_data.get("parameters", {})
-    #                     for param_name, param_value in parameters_data.items():
-    #                         parameter, _ = Parameter.objects.get_or_create(name=param_name)
-    #                         ProductParameter.objects.create(
-    #                             product_info_id=product_info.id,
-    #                             parameter=parameter,
-    #                             value=param_value,
-    #                         )
-    #
-    #                 return Response(
-    #                     {"Status": True, "Message": "Магазин успешно обновлен."}
-    #                 )
-    #         except IntegrityError:
-    #             return Response(
-    #                 {
-    #                     "Status": False,
-    #                     "Errors": "Не указаны все необходимые аргументы",
-    #                 },
-    #                 status=status.HTTP_400_BAD_REQUEST,
-    #             )
 
 
 class ProductListView(generics.ListAPIView):
@@ -648,7 +547,7 @@ class BasketView(views.APIView):
                     return Response(
                         {
                             "Status": False,
-                            "Errors": f"Товар с id {order_item_id} не найден в корзине",
+                            "Errors": f"Товар с id {order_item_id} не найден в корзине.",
                         },
                         status=status.HTTP_404_NOT_FOUND,
                     )
@@ -662,7 +561,7 @@ class BasketView(views.APIView):
                             "Status": False,
                             "Errors": {
                                 "quantity": [
-                                    f"Превышено доступное количество товара — {available_quantity}"
+                                    f"Превышено доступное количество товара — {available_quantity}."
                                 ],
                                 "id": [order_item_id],
                             },
@@ -717,29 +616,6 @@ class BasketView(views.APIView):
             )
 
         return Response({"Status": True, "Удалено товаров": deleted_count})
-
-
-class TestView(views.APIView):
-    permission_classes = [permissions.IsAuthenticated]
-
-    def get(self, request, *args, **kwargs):
-        return JsonResponse(
-            {
-                "Status": True,
-                "HTTP_Method": request.method,
-                "HTTP_Headers": dict(request.headers),
-            }
-        )
-
-    def post(self, request, *args, **kwargs):
-        print(request.data)
-        return JsonResponse(
-            {
-                "Status": True,
-                "HTTP_Method": request.method,
-                "HTTP_Headers": dict(request.headers),
-            }
-        )
 
 
 class OrderView(views.APIView):
@@ -852,3 +728,26 @@ class OrderView(views.APIView):
                     },
                     status=status.HTTP_400_BAD_REQUEST,
                 )
+
+
+class ShopOrderView(views.APIView):
+    """Получение заказов магазина."""
+
+    permission_classes = [IsAuthenticatedAndShopUser]
+
+    def get(self, request, *args, **kwargs):
+        orders = (
+            Order.objects.filter(
+                ordered_items__product_info__shop__user_id=request.user.id
+            )
+            .exclude(state="basket")
+            .prefetch_related(
+                "ordered_items__product_info__product__category",
+                "ordered_items__product_info__product_parameters__parameter",
+            )
+            .select_related("contact")
+            .distinct()
+        )
+
+        serializer = OrderSerializer(orders, many=True)
+        return Response({"Status": True, "Orders": serializer.data})

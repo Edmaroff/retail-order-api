@@ -8,23 +8,40 @@ from backend.views import (
     ProductListView,
     ShopDataView,
     ShopListView,
-    TestView,
+    ShopOrderView,
     UserContactsView,
     UserShopDetailView,
 )
 
 app_name = "backend"
-urlpatterns = [
-    path("", include("djoser.urls")),
-    path("", include("djoser.urls.authtoken")),
-    path("test/", TestView.as_view(), name="test"),
-    path("users/me/contacts/", UserContactsView.as_view(), name="user_contacts"),
+
+shop_urls = [
+    path("detail/", UserShopDetailView.as_view(), name="shop_detail"),
+    path("data/", ShopDataView.as_view(), name="shop_data"),
+    path("orders/", ShopOrderView.as_view(), name="shop_order"),
+]
+
+buyer_urls = [
+    path("contacts/", UserContactsView.as_view(), name="buyer_contacts"),
+    path('basket/', BasketView.as_view(), name='buyer_basket'),
+    path('orders/', OrderView.as_view(), name='buyer_order'),
+]
+
+user_urls = [
     path("categories/", CategoryListView.as_view(), name="categories"),
     path("shops/", ShopListView.as_view(), name="shops_list"),
-    path("users/me/shop/", UserShopDetailView.as_view(), name="user_shops"),
-    path("users/me/shop/data/", ShopDataView.as_view(), name="shops_data"),
     path("products/", ProductListView.as_view(), name="products"),
     path("products/detail/", ProductDetailView.as_view(), name="products_detail"),
-    path('basket/', BasketView.as_view(), name='basket'),
-    path('order/', OrderView.as_view(), name='order'),
+]
+
+djoser_urls = [
+    path("", include("djoser.urls")),
+    path("", include("djoser.urls.authtoken")),
+]
+
+urlpatterns = [
+    path("shop/", include(shop_urls)),
+    path("buyer/", include(buyer_urls)),
+    path("", include(user_urls)),
+    path("", include(djoser_urls)),
 ]
