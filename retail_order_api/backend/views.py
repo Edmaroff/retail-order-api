@@ -2,7 +2,6 @@ from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 from django.db import IntegrityError, transaction
 from django.db.models import F, Q
-from django.http import JsonResponse
 from django_filters import rest_framework
 from requests import get
 from rest_framework import filters, generics, permissions, status, views
@@ -37,10 +36,18 @@ from backend.serializers import (
     ShopDetailSerializer,
     ShopListSerializer,
 )
+from backend.signals import new_order
 
 
 class UserContactsView(views.APIView):
-    """Управление контактами пользователя."""
+    """
+    Управление контактами пользователя.
+
+    Get: Получить контакты пользователя.
+    Post: Добавить контакт пользователя.
+    Patch: Изменить контакт пользователя.
+    Delete: Удалить контакт пользователя.
+    """
 
     permission_classes = [permissions.IsAuthenticated]
 
@@ -128,8 +135,15 @@ class ShopListView(generics.ListAPIView):
     search_fields = ["name"]
 
 
-class UserShopDetailView(views.APIView):
-    """Управление магазином пользователя."""
+class ShopDetailView(views.APIView):
+    """
+    Управление магазином пользователя.
+
+    Get: Получить магазин пользователя.
+    Post: Добавить магазин пользователя.
+    Patch: Изменить магазин пользователя.
+    Delete: Удалить магазин пользователя.
+    """
 
     permission_classes = [IsAuthenticatedAndShopUser]
 
@@ -214,7 +228,12 @@ class CategoryListView(generics.ListAPIView):
 
 
 class ShopDataView(views.APIView):
-    """Загрузка и выгрузка товаров магазина."""
+    """
+    Загрузка и выгрузка товаров магазина.
+
+    Get: Выгрузить товары магазина.
+    Post: Загрузить товары магазина.
+    """
 
     permission_classes = [IsAuthenticatedAndShopUser]
 
@@ -422,8 +441,15 @@ class ProductDetailView(views.APIView, ProductPagination):
         return self.get_paginated_response(serializer.data)
 
 
-class BasketView(views.APIView):
-    """Управление корзиной пользователя."""
+class BuyerBasketView(views.APIView):
+    """
+    Управление корзиной покупателя.
+
+    Get: Получить товары из корзины покупателя.
+    Post: Добавить товары в корзину покупателя.
+    Patch: Изменить количество товара в корзине покупателя.
+    Delete: Удалить товары из корзины покупателя.
+    """
 
     permission_classes = [IsAuthenticatedAndBuyerUser]
 
@@ -618,9 +644,13 @@ class BasketView(views.APIView):
         return Response({"Status": True, "Удалено товаров": deleted_count})
 
 
-class OrderView(views.APIView):
+class BuyerOrderView(views.APIView):
+    """
+    Управление заказом покупателя.
 
-    """Управление заказом пользователя."""
+    Get: Получить заказы покупателя.
+    Post: Оформить заказ из корзины и отправить письмо покупателю.
+    """
 
     permission_classes = [IsAuthenticatedAndBuyerUser]
 
@@ -709,12 +739,19 @@ class OrderView(views.APIView):
                 order.state = "new"
                 order.save()
 
+                order_id = order.id
+
+                # Отправляем письмо покупателю
+                new_order.send(
+                    sender=self.__class__, user_id=request.user.id, order_id=order_id
+                )
+
                 return Response(
                     {
                         "Status": True,
                         "Message": "Заказ успешно оформлен. "
                         "Состав заказа мог измениться из-за отсутствия "
-                        "доступного количества товара у продавца.",
+                        "требуемого количества товара у продавца.",
                         "Order": data,
                     }
                 )

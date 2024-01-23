@@ -99,9 +99,6 @@ class CustomUser(AbstractUser):
         unique=True,
         null=True,
         blank=True,
-        help_text=_(
-            "Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only."
-        ),
         validators=[username_validator],
         error_messages={
             "unique": _("A user with that username already exists."),
@@ -253,7 +250,7 @@ class ProductInfo(models.Model):
 
     class Meta:
         verbose_name = "Информация о продукте в магазине"
-        verbose_name_plural = "Информационный список о продуктах"
+        verbose_name_plural = "Список с информацией о продуктах"
         ordering = ("product", "shop")
         constraints = [
             models.UniqueConstraint(

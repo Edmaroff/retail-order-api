@@ -1,30 +1,30 @@
 from django.urls import include, path
 
 from backend.views import (
-    BasketView,
+    BuyerBasketView,
+    BuyerOrderView,
     CategoryListView,
-    OrderView,
     ProductDetailView,
     ProductListView,
     ShopDataView,
+    ShopDetailView,
     ShopListView,
     ShopOrderView,
     UserContactsView,
-    UserShopDetailView,
 )
 
 app_name = "backend"
 
 shop_urls = [
-    path("detail/", UserShopDetailView.as_view(), name="shop_detail"),
+    path("detail/", ShopDetailView.as_view(), name="shop_detail"),
     path("data/", ShopDataView.as_view(), name="shop_data"),
     path("orders/", ShopOrderView.as_view(), name="shop_order"),
 ]
 
 buyer_urls = [
     path("contacts/", UserContactsView.as_view(), name="buyer_contacts"),
-    path('basket/', BasketView.as_view(), name='buyer_basket'),
-    path('orders/', OrderView.as_view(), name='buyer_order'),
+    path('basket/', BuyerBasketView.as_view(), name='buyer_basket'),
+    path('orders/', BuyerOrderView.as_view(), name='buyer_order'),
 ]
 
 user_urls = [

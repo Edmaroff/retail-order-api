@@ -49,6 +49,7 @@ INSTALLED_APPS = [
     "backend.apps.BackendConfig",
     "django_rest_passwordreset",
     "djoser",
+    "drf_spectacular",
 ]
 
 MIDDLEWARE = [
@@ -168,6 +169,9 @@ REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': (
             'rest_framework.authentication.TokenAuthentication',
     ),
+
+    # Генерация схем OpenAPI
+    'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 }
 
 
@@ -190,6 +194,14 @@ DJOSER = {
     'PASSWORD_RESET_CONFIRM_URL': '#/password-reset/{uid}/{token}',  # URL подтв-ие сброса пароля
     'LOGOUT_ON_PASSWORD_CHANGE': True,  # Выход при смене пароля
     'PASSWORD_RESET_SHOW_EMAIL_NOT_FOUND': True,  # Ошибка 400 при сбросе, если email не существует
+}
+
+# drf_spectacular
+SPECTACULAR_SETTINGS = {
+    "TITLE": "retail-order-api",
+    "DESCRIPTION": "API Сервис заказа товаров для розничных сетей",
+    "VERSION": "1.0.0",
+    "SERVE_INCLUDE_SCHEMA": False,
 }
 
 if DEBUG:
