@@ -32,5 +32,12 @@
   <a href="https://drive.google.com/file/d/1z1P4F3oXjBnAK8kHxRroIrrPYS2sGIEr/view?usp=sharing" title='Python' target="_blank"><img align="center" src="https://github.com/Edmaroff/retail-order-api/blob/main/Схема_БД.jpg"/></a>
 </details>
 
-
+<details>
+  <summary><h3>Используемые технологии</h3></summary>
+    <ul>
+      <li>Django</li>
+      <li>Django REST framework</li>
+      <li>Djoser</li>
+    </ul>
+</details>
 <hr>

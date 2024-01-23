@@ -47,7 +47,6 @@ INSTALLED_APPS = [
     "rest_framework.authtoken",
     "django_filters",
     "backend.apps.BackendConfig",
-    "django_rest_passwordreset",
     "djoser",
     "drf_spectacular",
 ]
