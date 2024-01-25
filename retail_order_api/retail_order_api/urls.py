@@ -18,7 +18,7 @@ from django.contrib import admin
 from django.urls import include, path
 
 from retail_order_api import settings
-from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
+from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 
 
 urlpatterns = [
@@ -29,5 +29,5 @@ urlpatterns = [
 ]
 
 if settings.DEBUG:
-    urlpatterns += [path('silk/', include('silk.urls', namespace='silk')),
-                    path("__debug__/", include("debug_toolbar.urls")),]
+    urlpatterns += [path("__debug__/", include("debug_toolbar.urls"))
+                    ]
