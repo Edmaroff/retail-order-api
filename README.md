@@ -37,6 +37,8 @@
     <ul>
       <li>Django</li>
       <li>Django REST framework</li>
+      <li>Celery</li>
+      <li>Redis</li>
       <li>Djoser</li>
     </ul>
 </details>

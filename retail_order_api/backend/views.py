@@ -284,7 +284,11 @@ class ShopDataView(views.APIView):
             )
 
     def get(self, request, *args, **kwargs):
-        shop = Shop.objects.filter(user=request.user).first()
+        shop = (
+            Shop.objects.filter(user=request.user)
+            .prefetch_related("categories")
+            .first()
+        )
 
         if not shop:
             return Response(
@@ -292,7 +296,12 @@ class ShopDataView(views.APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
-        products_info = ProductInfo.objects.filter(shop=shop)
+        products_info = ProductInfo.objects.filter(shop=shop).select_related(
+            "product__category"
+        )
+        product_parameters = ProductParameter.objects.filter(
+            product_info__shop=shop
+        ).select_related("parameter")
 
         # Применяем пагинацию
         paginator = self.pagination_class()
@@ -305,6 +314,16 @@ class ShopDataView(views.APIView):
             "goods": [],
         }
 
+        # Обработка параметров товара
+        product_parameters_dict = {}
+        for parameter in product_parameters:
+            product_info_id = parameter.product_info_id
+            if product_info_id not in product_parameters_dict:
+                product_parameters_dict[product_info_id] = {}
+            product_parameters_dict[product_info_id][
+                parameter.parameter.name
+            ] = parameter.value
+
         # Обработка информации о товарах
         for product_info in result_page:
             product_data = {
@@ -315,17 +334,8 @@ class ShopDataView(views.APIView):
                 "price": product_info.price,
                 "price_rrp": product_info.price_rrp,
                 "quantity": product_info.quantity,
-                "parameters": {},
+                "parameters": product_parameters_dict.get(product_info.id, {}),
             }
-
-            # Обработка параметров товара
-            products_parameter = ProductParameter.objects.filter(
-                product_info=product_info
-            )
-            for product_parameter in products_parameter:
-                product_data["parameters"][
-                    product_parameter.parameter.name
-                ] = product_parameter.value
 
             data["goods"].append(product_data)
 
