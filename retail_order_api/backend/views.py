@@ -1,15 +1,13 @@
+from celery.result import AsyncResult
 from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 from django.db import IntegrityError, transaction
 from django.db.models import F, Q
+from django.urls import reverse
 from django_filters import rest_framework
-from requests import get
 from rest_framework import filters, generics, permissions, status, views
 from rest_framework.response import Response
 from ujson import loads as load_json
-from yaml import SafeLoader
-from yaml import load as load_yaml
-from yaml.error import YAMLError
 
 from backend.filters import ProductFilter
 from backend.models import (
@@ -17,13 +15,17 @@ from backend.models import (
     Contact,
     Order,
     OrderItem,
-    Parameter,
     Product,
     ProductInfo,
     ProductParameter,
     Shop,
 )
-from backend.pagination import CategoryPagination, ProductPagination, ShopPagination
+from backend.pagination import (
+    CategoryPagination,
+    ProductPagination,
+    ProductShopPagination,
+    ShopPagination,
+)
 from backend.permissions import IsAuthenticatedAndBuyerUser, IsAuthenticatedAndShopUser
 from backend.serializers import (
     CategoryListSerializer,
@@ -37,6 +39,52 @@ from backend.serializers import (
     ShopListSerializer,
 )
 from backend.signals import new_order
+from backend.tasks import do_import
+
+
+class CeleryTaskResultView(views.APIView):
+    """Получение результата задачи celery по идентификатору."""
+
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, task_id):
+        task_result = AsyncResult(task_id)
+        result = {
+            "task_id": task_id,
+            "task_status": task_result.status,
+            "task_result": task_result.result,
+        }
+        return Response(result)
+
+
+class ShopListView(generics.ListAPIView):
+    """Просмотр списка активных магазинов."""
+
+    queryset = Shop.objects.filter(state=True)
+    serializer_class = ShopListSerializer
+    pagination_class = ShopPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ["name"]
+
+
+class CategoryListView(generics.ListAPIView):
+    """Просмотр списка категорий."""
+
+    queryset = Category.objects.all()
+    serializer_class = CategoryListSerializer
+    pagination_class = CategoryPagination
+    filter_backends = [filters.SearchFilter]
+    search_fields = ["name"]
+
+
+class ProductListView(generics.ListAPIView):
+    """Получение списка товаров."""
+
+    queryset = Product.objects.all()
+    serializer_class = ProductListSerializer
+    pagination_class = ProductPagination
+    filter_backends = [rest_framework.DjangoFilterBackend]
+    filterset_class = ProductFilter
 
 
 class UserContactsView(views.APIView):
@@ -125,16 +173,6 @@ class UserContactsView(views.APIView):
             )
 
 
-class ShopListView(generics.ListAPIView):
-    """Просмотр списка активных магазинов."""
-
-    queryset = Shop.objects.filter(state=True)
-    serializer_class = ShopListSerializer
-    pagination_class = ShopPagination
-    filter_backends = [filters.SearchFilter]
-    search_fields = ["name"]
-
-
 class ShopDetailView(views.APIView):
     """
     Управление магазином пользователя.
@@ -217,16 +255,6 @@ class ShopDetailView(views.APIView):
             )
 
 
-class CategoryListView(generics.ListAPIView):
-    """Просмотр списка категорий."""
-
-    queryset = Category.objects.all()
-    serializer_class = CategoryListSerializer
-    pagination_class = CategoryPagination
-    filter_backends = [filters.SearchFilter]
-    search_fields = ["name"]
-
-
 class ShopDataView(views.APIView):
     """
     Загрузка и выгрузка товаров магазина.
@@ -235,6 +263,7 @@ class ShopDataView(views.APIView):
     Post: Загрузить товары магазина.
     """
 
+    pagination_class = ProductShopPagination
     permission_classes = [IsAuthenticatedAndShopUser]
 
     @staticmethod
@@ -263,17 +292,21 @@ class ShopDataView(views.APIView):
                 status=status.HTTP_404_NOT_FOUND,
             )
 
+        products_info = ProductInfo.objects.filter(shop=shop)
+
+        # Применяем пагинацию
+        paginator = self.pagination_class()
+        result_page = paginator.paginate_queryset(products_info, request)
+
         # Данные для выгрузки
-        categories = list(shop.categories.values_list("name", flat=True))
         data = {
             "shop_name": shop.name,
-            "categories": categories,
+            "categories": list(shop.categories.values_list("name", flat=True)),
             "goods": [],
         }
 
         # Обработка информации о товарах
-        products_info = ProductInfo.objects.filter(shop=shop)
-        for product_info in products_info:
+        for product_info in result_page:
             product_data = {
                 "id": product_info.external_id,
                 "category": product_info.product.category.name,
@@ -296,7 +329,8 @@ class ShopDataView(views.APIView):
 
             data["goods"].append(product_data)
 
-        return Response({"Status": True, "Data": data})
+        # Возвращаем результат с учетом пагинации
+        return paginator.get_paginated_response({"Status": True, "Data": data})
 
     def post(self, request, *args, **kwargs):
         url = request.data.get("url")
@@ -305,106 +339,20 @@ class ShopDataView(views.APIView):
         if isinstance(check_url, Response):
             return check_url
 
-        try:
-            stream = get(url).content
-            data = load_yaml(stream, Loader=SafeLoader)
-        except YAMLError:
-            return Response(
-                {
-                    "Status": False,
-                    "Errors": f"Ошибка при загрузке данных из файла YAML.",
-                },
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-        with transaction.atomic():
-            try:
-                # # ОТЛАДКА - чтение файла с ПК
-                # import os
-                # url = "http://www.exmple100.ru"
-                # stream = os.path.join(os.getcwd(), "data/shop_1.yaml")
-                # with open(stream, encoding="utf-8") as file:
-                #     data = load_yaml(file, Loader=SafeLoader)
-                # # ОТЛАДКА - чтение файла с ПК
+        # Вызов Celery задачи
+        task_result = do_import.delay(url, request.user.id)
+        task_id = task_result.id
 
-                # Создание или обновление магазина
-                shop, _ = Shop.objects.update_or_create(
-                    user=request.user,
-                    defaults={"name": data.get("shop_name"), "url": url},
-                )
+        # Создание URL для просмотра результатов
+        result_url = reverse("backend:task-result", kwargs={"task_id": task_id})
 
-                # Обработка категорий
-                shop.categories.clear()  # Удаление существующих категорий
-                category_name_to_id = {}  # Для создания товаров
-                categories_data = data.get("categories", [])
-                for category_name in categories_data:
-                    category_object, _ = Category.objects.get_or_create(
-                        name=category_name
-                    )
-                    category_object.shops.add(shop.id)
-                    category_name_to_id[category_name] = category_object.id
-
-                # Обработка товаров
-                ProductInfo.objects.filter(
-                    shop_id=shop.id
-                ).delete()  # Удаление существующих товаров магазина
-                products_data = data.get("goods", [])
-                for product_data in products_data:
-                    # Попытка получить товар, если его нет — создание
-                    try:
-                        product = Product.objects.get(name=product_data.get("name"))
-                        # Проверка связи категории товара с магазином
-                        if product.category.name not in category_name_to_id:
-                            product.category.shops.add(shop.id)
-                    except Product.DoesNotExist:
-                        category_id = category_name_to_id.get(
-                            product_data.get("category")
-                        )
-                        product = Product.objects.create(
-                            name=product_data.get("name"), category_id=category_id
-                        )
-
-                    # Обработка информации о товаре
-                    product_info = ProductInfo.objects.create(
-                        product_id=product.id,
-                        shop_id=shop.id,
-                        external_id=product_data.get("id"),
-                        model=product_data.get("model"),
-                        price=product_data.get("price"),
-                        price_rrp=product_data.get("price_rrp"),
-                        quantity=product_data.get("quantity"),
-                    )
-
-                    # Обработка параметров товара
-                    parameters_data = product_data.get("parameters", {})
-                    for param_name, param_value in parameters_data.items():
-                        parameter, _ = Parameter.objects.get_or_create(name=param_name)
-                        ProductParameter.objects.create(
-                            product_info_id=product_info.id,
-                            parameter=parameter,
-                            value=param_value,
-                        )
-
-                return Response(
-                    {"Status": True, "Message": "Магазин успешно обновлен."}
-                )
-            except IntegrityError:
-                return Response(
-                    {
-                        "Status": False,
-                        "Errors": "Не указаны все необходимые аргументы.",
-                    },
-                    status=status.HTTP_400_BAD_REQUEST,
-                )
-
-
-class ProductListView(generics.ListAPIView):
-    """Получение списка товаров."""
-
-    queryset = Product.objects.all()
-    serializer_class = ProductListSerializer
-    pagination_class = ProductPagination
-    filter_backends = [rest_framework.DjangoFilterBackend]
-    filterset_class = ProductFilter
+        return Response(
+            {
+                "Status": True,
+                "Message": "Начали обрабатывать данные.",
+                "result_url": result_url,
+            }
+        )
 
 
 class ProductDetailView(views.APIView, ProductPagination):

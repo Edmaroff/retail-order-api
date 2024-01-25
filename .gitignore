@@ -1,6 +1,7 @@
 ### main_gitignore template
 # Personal
 manual.md
+dump.rdb
 
 # PyCharm
 .idea/

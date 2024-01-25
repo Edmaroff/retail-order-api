@@ -203,6 +203,11 @@ SPECTACULAR_SETTINGS = {
     "SERVE_INCLUDE_SCHEMA": False,
 }
 
+# Celery
+CELERY_BROKER_URL = "redis://localhost:6379"
+CELERY_RESULT_BACKEND = "redis://localhost:6379"
+
+
 if DEBUG:
     # debug_toolbar, silk
     MIDDLEWARE += ['debug_toolbar.middleware.DebugToolbarMiddleware',

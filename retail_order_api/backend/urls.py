@@ -4,6 +4,7 @@ from backend.views import (
     BuyerBasketView,
     BuyerOrderView,
     CategoryListView,
+    CeleryTaskResultView,
     ProductDetailView,
     ProductListView,
     ShopDataView,
@@ -34,6 +35,11 @@ user_urls = [
     path("products/detail/", ProductDetailView.as_view(), name="products_detail"),
 ]
 
+# URL для просмотра результатов задач Celery
+task_urls = [
+    path("task-result/<str:task_id>/", CeleryTaskResultView.as_view(), name="task-result"),
+]
+
 djoser_urls = [
     path("", include("djoser.urls")),
     path("", include("djoser.urls.authtoken")),
@@ -43,5 +49,6 @@ urlpatterns = [
     path("shop/", include(shop_urls)),
     path("buyer/", include(buyer_urls)),
     path("", include(user_urls)),
+    path("", include(task_urls)),
     path("", include(djoser_urls)),
 ]
