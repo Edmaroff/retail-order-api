@@ -11,7 +11,7 @@ from backend.views import (
     ShopDetailView,
     ShopListView,
     ShopOrderView,
-    UserContactsView,
+    UserContactsView, index,
 )
 
 app_name = "backend"
@@ -46,6 +46,7 @@ djoser_urls = [
 ]
 
 urlpatterns = [
+    path('', index, name='google_login'),
     path("shop/", include(shop_urls)),
     path("buyer/", include(buyer_urls)),
     path("", include(user_urls)),
