@@ -66,7 +66,7 @@ class ShopListView(generics.ListAPIView):
     filter_backends = [filters.SearchFilter]
     search_fields = ["name"]
 
-# ИСПРАВИТЬ permission_classes убрать и index убрвать
+# ИСПРАВИТЬ permission_classes
 class CategoryListView(generics.ListAPIView):
     """Просмотр списка категорий."""
 
@@ -78,15 +78,7 @@ class CategoryListView(generics.ListAPIView):
 
 
     permission_classes = [permissions.IsAuthenticated]
-
-
-from django.shortcuts import render
-
-def index(request):
-     return render(request, 'backend/index.html')
-
-
-# ИСПРАВИТЬ permission_classes убрать и index убрвать
+# ИСПРАВИТЬ permission_classes
 
 
 class ProductListView(generics.ListAPIView):
