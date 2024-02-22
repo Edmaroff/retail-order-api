@@ -30,7 +30,6 @@ class CustomUserAdmin(UserAdmin):
         "first_name",
         "patronymic",
         "company",
-        "is_active",
     ]
     list_filter = ["type", "is_active"]
     search_fields = ["first_name", "patronymic", "last_name", "email", "company"]
@@ -52,7 +51,7 @@ class CustomUserAdmin(UserAdmin):
         ),
         (
             _("Permissions"),
-            {"fields": ("is_active", "is_superuser", "groups", "user_permissions")},
+            {"fields": ("is_superuser", "groups", "user_permissions")},
         ),
         (_("Important dates"), {"fields": ("last_login", "date_joined")}),
     ]

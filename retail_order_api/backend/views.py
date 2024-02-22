@@ -3,10 +3,14 @@ from django.core.exceptions import ValidationError
 from django.core.validators import URLValidator
 from django.db import IntegrityError, transaction
 from django.db.models import F, Q
+from django.http import JsonResponse
 from django.urls import reverse
+from django.views import View
 from django_filters import rest_framework
+from djoser.social.views import ProviderAuthView
 from rest_framework import filters, generics, permissions, status, views
 from rest_framework.response import Response
+from social_django.utils import load_backend, load_strategy
 from ujson import loads as load_json
 
 from backend.filters import ProductFilter
@@ -40,6 +44,35 @@ from backend.serializers import (
 )
 from backend.signals import new_order
 from backend.tasks import do_import
+from retail_order_api import settings
+
+
+class CustomProviderAuthView(ProviderAuthView):
+    def get(self, request, *args, **kwargs):
+        """
+        Метод является модифицированной версией ProviderAuthView.get
+
+        Изменения:
+        - Для получения redirect_uri используются настройки проекта вместо GET-параметров.
+        """
+        redirect_uri = settings.DJOSER.get("SOCIAL_AUTH_ALLOWED_REDIRECT_URIS")[0]
+        strategy = load_strategy(request)
+        strategy.session_set("redirect_uri", redirect_uri)
+
+        backend_name = self.kwargs["provider"]
+        backend = load_backend(strategy, backend_name, redirect_uri=redirect_uri)
+
+        authorization_url = backend.auth_url()
+        return Response(data={"authorization_url": authorization_url})
+
+
+class RedirectSocial(View):
+    """Редирект после успешной социальной аутентификации."""
+
+    def get(self, request, *args, **kwargs):
+        code, state = str(request.GET["code"]), str(request.GET["state"])
+        json_obj = {"code": code, "state": state}
+        return JsonResponse(json_obj)
 
 
 class CeleryTaskResultView(views.APIView):
@@ -87,7 +120,7 @@ class ProductListView(generics.ListAPIView):
     filterset_class = ProductFilter
 
 
-class UserContactsView(views.APIView):
+class BuyerContactsView(views.APIView):
     """
     Управление контактами пользователя.
 
@@ -97,7 +130,7 @@ class UserContactsView(views.APIView):
     Delete: Удалить контакт пользователя.
     """
 
-    permission_classes = [permissions.IsAuthenticated]
+    permission_classes = [IsAuthenticatedAndBuyerUser]
 
     def get(self, request):
         contacts = Contact.objects.filter(user=request.user)
