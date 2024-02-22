@@ -1,17 +1,19 @@
-from django.urls import include, path
+from django.urls import include, path, re_path
 
 from backend.views import (
     BuyerBasketView,
+    BuyerContactsView,
     BuyerOrderView,
     CategoryListView,
     CeleryTaskResultView,
+    CustomProviderAuthView,
     ProductDetailView,
     ProductListView,
+    RedirectSocial,
     ShopDataView,
     ShopDetailView,
     ShopListView,
     ShopOrderView,
-    UserContactsView, index,
 )
 
 app_name = "backend"
@@ -23,9 +25,9 @@ shop_urls = [
 ]
 
 buyer_urls = [
-    path("contacts/", UserContactsView.as_view(), name="buyer_contacts"),
-    path('basket/', BuyerBasketView.as_view(), name='buyer_basket'),
-    path('orders/', BuyerOrderView.as_view(), name='buyer_order'),
+    path("contacts/", BuyerContactsView.as_view(), name="buyer_contacts"),
+    path("basket/", BuyerBasketView.as_view(), name="buyer_basket"),
+    path("orders/", BuyerOrderView.as_view(), name="buyer_order"),
 ]
 
 user_urls = [
@@ -37,16 +39,23 @@ user_urls = [
 
 # URL для просмотра результатов задач Celery
 task_urls = [
-    path("task-result/<str:task_id>/", CeleryTaskResultView.as_view(), name="task-result"),
+    path(
+        "task-result/<str:task_id>/", CeleryTaskResultView.as_view(), name="task-result"
+    ),
 ]
 
 djoser_urls = [
-    path("", include("djoser.urls")),
-    path("", include("djoser.urls.authtoken")),
+    path("auth/", include("djoser.urls")),
+    path("auth/", include("djoser.urls.jwt")),
+    path('auth/social/redirect/', RedirectSocial.as_view()),
+    re_path(
+        r"^auth/social/(?P<provider>\S+)/$",
+        CustomProviderAuthView.as_view(),
+        name="provider-auth",
+    ),
 ]
 
 urlpatterns = [
-    path('', index, name='google_login'),
     path("shop/", include(shop_urls)),
     path("buyer/", include(buyer_urls)),
     path("", include(user_urls)),
