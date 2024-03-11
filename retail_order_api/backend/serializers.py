@@ -81,6 +81,7 @@ class ShopListSerializer(serializers.ModelSerializer):
         model = Shop
         fields = ["id", "name"]
         read_only_fields = ["id"]
+        ordering = ["name"]
 
 
 class ProductListSerializer(serializers.ModelSerializer):
@@ -128,6 +129,10 @@ class OrderItemSerializer(serializers.ModelSerializer):
         extra_kwargs = {"order": {"write_only": True}}
 
     def validate(self, data):
+        """
+        Проверяет количество добавляемого в корзину продукта и доступное количество товара у
+        продавца.
+        """
         requested_quantity = data.get("quantity", DEFAULT_QUANTITY_ORDER_ITEM)
         available_quantity = data.get("product_info").quantity
 

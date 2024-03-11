@@ -91,7 +91,7 @@ class CeleryTaskResultView(views.APIView):
 
 
 class ShopListView(generics.ListAPIView):
-    """Просмотр списка активных магазинов."""
+    """Получение списка активных магазинов."""
 
     queryset = Shop.objects.filter(state=True)
     serializer_class = ShopListSerializer
@@ -101,7 +101,7 @@ class ShopListView(generics.ListAPIView):
 
 
 class CategoryListView(generics.ListAPIView):
-    """Просмотр списка категорий."""
+    """Получение списка категорий."""
 
     queryset = Category.objects.all()
     serializer_class = CategoryListSerializer
@@ -606,7 +606,7 @@ class BuyerBasketView(views.APIView):
                 order_item_ids = [
                     int(cat_id.strip()) for cat_id in order_item_ids.split(",")
                 ]
-            else:
+            elif isinstance(order_item_ids, str):
                 order_item_ids = [int(order_item_ids)]
         except ValueError:
             return Response(

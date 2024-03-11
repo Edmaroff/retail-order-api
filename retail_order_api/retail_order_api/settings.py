@@ -119,6 +119,9 @@ REST_FRAMEWORK = {
     ),
     # Генерация схем OpenAPI
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+
+    # Формат для тестов
+    "TEST_REQUEST_DEFAULT_FORMAT": "json",
 }
 
 

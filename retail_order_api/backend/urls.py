@@ -32,7 +32,7 @@ buyer_urls = [
 
 user_urls = [
     path("categories/", CategoryListView.as_view(), name="categories"),
-    path("shops/", ShopListView.as_view(), name="shops_list"),
+    path("shops/", ShopListView.as_view(), name="shops"),
     path("products/", ProductListView.as_view(), name="products"),
     path("products/detail/", ProductDetailView.as_view(), name="products_detail"),
 ]
