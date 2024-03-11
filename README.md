@@ -27,13 +27,15 @@
 
 <h3><a href="https://documenter.getpostman.com/view/25907870/2s9Ykn92Za">API Документация (Postman)</a></h3>
 <h3><a href="https://github.com/Edmaroff/retail-order-api/blob/main/retail_order_api/data/shop_1.yaml">Пример файла YAML для импорта товаров</a></h3>
+
 <details>
-  <summary><h3>Схема базы данных</h3></summary>
+  <summary style="font-size: 1.3em;"><b>Схема базы данных</b></summary>
   <a href="https://drive.google.com/file/d/1z1P4F3oXjBnAK8kHxRroIrrPYS2sGIEr/view?usp=sharing" title='Python' target="_blank"><img align="center" src="https://github.com/Edmaroff/retail-order-api/blob/main/Схема_БД.jpg"/></a>
 </details>
 
-<details>
-  <summary><h3>Используемые технологии</h3></summary>
+
+<details >
+  <summary style="font-size: 1.3em;"><b>Используемые технологии</b></summary>
     <ul>
       <li>Django</li>
       <li>Django REST framework</li>
@@ -41,6 +43,7 @@
       <li>Redis</li>
       <li>Djoser</li>
       <li>social_django</li>
+      <li>Pytest</li>
     </ul>
 </details>
 <hr>
