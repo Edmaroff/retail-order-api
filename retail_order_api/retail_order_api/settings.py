@@ -12,13 +12,13 @@ DEBUG = os.getenv("DEBUG").lower() == "true"
 ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS").split(",")
 
 INSTALLED_APPS = [
+    "baton",
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
     "django.contrib.sessions",
     "django.contrib.messages",
     "django.contrib.staticfiles",
-
     "rest_framework",
     "django_filters",
     "backend.apps.BackendConfig",
@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     "social_django",  # djoser social auth
     "rest_framework_simplejwt",
     "drf_spectacular",
+    "baton.autodiscover",
 ]
 
 MIDDLEWARE = [
@@ -119,7 +120,6 @@ REST_FRAMEWORK = {
     ),
     # Генерация схем OpenAPI
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-
     # Формат для тестов
     "TEST_REQUEST_DEFAULT_FORMAT": "json",
 }
@@ -204,6 +204,79 @@ SPECTACULAR_SETTINGS = {
 # Celery
 CELERY_BROKER_URL = "redis://localhost:6379"
 CELERY_RESULT_BACKEND = "redis://localhost:6379"
+
+
+# django-baton
+BATON = {
+    "SITE_HEADER": "retail-order-api",
+    "SITE_TITLE": "Административная панель",
+    "INDEX_TITLE": "Главная",
+    "SUPPORT_HREF": "https://github.com/Edmaroff",
+    "COPYRIGHT": "Copyright © 2024",
+    "POWERED_BY": '<a href="https://github.com/Edmaroff">Edmaroff</a>',
+    "CHANGELIST_FILTERS_IN_MODAL": True,
+    "CHANGELIST_FILTERS_FORM": True,
+    "MENU_TITLE": "Menu",
+    "GRAVATAR_ENABLED": True,
+    "GRAVATAR_DEFAULT_IMG": "mp",
+    "MENU": (
+        {"type": "title", "label": "Основное", "apps": ("auth",)},
+        {
+            "type": "app",
+            "name": "auth",
+            "label": "Authentication",
+            "models": ({"name": "group", "label": "Groups"},),
+        },
+        {
+            "type": "app",
+            "name": "social_django",
+            "label": "Social Django",
+        },
+        {
+            "type": "app",
+            "name": "backend",
+            "label": "Управление пользователями",
+            "models": (
+                {"name": "customuser", "label": "Пользователи"},
+                {"name": "contact", "label": "Контакты"},
+            ),
+        },
+        {
+            "type": "app",
+            "name": "backend",
+            "label": "Управление магазинами",
+            "models": ({"name": "shop", "label": "Магазины"},),
+        },
+        {
+            "type": "app",
+            "name": "backend",
+            "label": "Управление продуктами",
+            "models": (
+                {"name": "category", "label": "Категории"},
+                {"name": "product", "label": "Продукты"},
+                {"name": "productinfo", "label": "Информация о продуктах"},
+                {"name": "parameter", "label": "Общие параметры"},
+                {"name": "productparameter", "label": "Параметры продукта"},
+            ),
+        },
+        {
+            "type": "app",
+            "name": "backend",
+            "label": "Управление заказами",
+            "models": ({"name": "order", "label": "Заказы"},),
+        },
+        {
+            "type": "free",
+            "label": "Документация API",
+            "url": "http://localhost:8000/api/v1/schema/docs/",
+        },
+        {
+            "type": "free",
+            "label": "Документация Postman",
+            "url": "https://documenter.getpostman.com/view/25907870/2s9Ykn92Za",
+        },
+    ),
+}
 
 if DEBUG:
     # debug_toolbar
