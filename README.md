@@ -21,6 +21,7 @@
 <ul>
   <li>Регистрация, активация и аутентификация через API, аналогично клиентам.</li>
   <li>Управление магазином: создание, просмотр, изменение и удаление.</li>
+  <li>Управление продуктами с возможностью добавления фотографии.</li>
   <li>Загрузка товаров в базу данных из файла YAML и их выгрузка из базы.</li>
   <li>Просмотр списка всех категорий и активных заказов для своего магазина.</li>
 </ul>
@@ -30,7 +31,7 @@
 
 <details>
   <summary style="font-size: 1.3em;"><b>Схема базы данных</b></summary>
-  <a href="https://drive.google.com/file/d/1z1P4F3oXjBnAK8kHxRroIrrPYS2sGIEr/view?usp=sharing" title='Python' target="_blank"><img align="center" src="https://github.com/Edmaroff/retail-order-api/blob/main/Схема_БД.jpg"/></a>
+  <a href="https://drive.google.com/file/d/1z1P4F3oXjBnAK8kHxRroIrrPYS2sGIEr/view?usp=sharing" title='Python' target="_blank"><img src="https://github.com/Edmaroff/retail-order-api/blob/main/Схема_БД.jpg" alt="Схема БД"></a>
 </details>
 
 
@@ -43,6 +44,7 @@
       <li>Redis</li>
       <li>Djoser</li>
       <li>social_django</li>
+      <li>Imagekit</li>
       <li>Pytest</li>
     </ul>
 </details>
