@@ -243,11 +243,12 @@ class Product(models.Model):
         super(Product, self).save(*args, **kwargs)
 
     def delete(self, *args, **kwargs):
+        original_image_dir = os.path.dirname(os.path.dirname(self.image_small.path))
+        derivative_image_dir = os.path.dirname(self.image.path)
+
         self.delete_cached_files()
 
         # Удаляем директории исходного и производных файлов
-        original_image_dir = os.path.dirname(os.path.dirname(self.image_small.path))
-        derivative_image_dir = os.path.dirname(self.image.path)
         os.rmdir(original_image_dir)
         os.rmdir(derivative_image_dir)
 
@@ -267,7 +268,7 @@ class Product(models.Model):
                 field = getattr(self, field_name)
                 try:
                     file = field.file
-                except FileNotFoundError:
+                except (FileNotFoundError, ValueError):
                     continue
                 cache_backend = field.cachefile_backend
                 cache_backend.cache.delete(cache_backend.get_key(file))

@@ -1,5 +1,6 @@
 from django.contrib import admin
 from django.contrib.auth.admin import UserAdmin
+from django.utils.html import format_html
 from django.utils.translation import gettext_lazy as _
 
 from backend.models import (
@@ -126,9 +127,34 @@ class CategoryAdmin(admin.ModelAdmin):
 
 @admin.register(Product)
 class ProductAdmin(admin.ModelAdmin):
-    list_display = ["id", "name", "category"]
+    list_display = ["name", "category", "image", "image_small_tag"]
+    readonly_fields = ["image_small", "image_medium", "image_big"]
     search_fields = ["name", "category__name"]
     list_filter = ["category"]
+    fieldsets = [
+        (None, {"fields": ("name", "category", "image")}),
+        (
+            "Производные изображения",
+            {
+                "classes": ("collapse",),
+                "fields": ("image_small", "image_medium", "image_big"),
+            },
+        ),
+    ]
+
+    def image_small_tag(self, obj):
+        return format_html('<img src="{}" />'.format(obj.image_small.url))
+
+    image_small_tag.short_description = "Миниатюра"
+
+    def get_actions(self, request):
+        """
+        Отключение массового удаления со страницы списка моделей для корректного вызова delete.
+        """
+        actions = super(self.__class__, self).get_actions(request)
+        if "delete_selected" in actions:
+            del actions["delete_selected"]
+        return actions
 
 
 class ProductParameterInline(admin.TabularInline):
