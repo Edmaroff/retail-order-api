@@ -30,20 +30,20 @@ from backend.pagination import (
     ProductShopPagination,
     ShopPagination,
 )
-from backend.permissions import IsAuthenticatedAndBuyerUser, IsAuthenticatedAndShopUser
+from backend.permissions import IsBuyerUser, IsShopUser
 from backend.serializers import (
     CategoryListSerializer,
     ContactSerializer,
     OrderItemSerializer,
     OrderSerializer,
     ProductInfoSerializer,
-    ProductListSerializer,
+    ProductWithImageSerializer,
     ShopCreateUpdateSerializer,
     ShopDetailSerializer,
     ShopListSerializer,
 )
 from backend.signals import new_order
-from backend.tasks import do_import
+from backend.tasks import delete_cached_files_celery, do_import_celery
 from retail_order_api import settings
 
 
@@ -66,7 +66,7 @@ class CustomProviderAuthView(ProviderAuthView):
         return Response(data={"authorization_url": authorization_url})
 
 
-class RedirectSocial(View):
+class RedirectSocialView(View):
     """Редирект после успешной социальной аутентификации."""
 
     def get(self, request, *args, **kwargs):
@@ -114,7 +114,8 @@ class ProductListView(generics.ListAPIView):
     """Получение списка товаров."""
 
     queryset = Product.objects.all()
-    serializer_class = ProductListSerializer
+    # serializer_class = ProductSerializer
+    serializer_class = ProductWithImageSerializer
     pagination_class = ProductPagination
     filter_backends = [rest_framework.DjangoFilterBackend]
     filterset_class = ProductFilter
@@ -130,7 +131,7 @@ class BuyerContactsView(views.APIView):
     Delete: Удалить контакт пользователя.
     """
 
-    permission_classes = [IsAuthenticatedAndBuyerUser]
+    permission_classes = [IsBuyerUser]
 
     def get(self, request):
         contacts = Contact.objects.filter(user=request.user)
@@ -169,22 +170,21 @@ class BuyerContactsView(views.APIView):
 
         try:
             contact = Contact.objects.get(user=request.user, id=contact_id)
-            serializer = ContactSerializer(contact, data=request.data, partial=True)
-
-            if serializer.is_valid():
-                serializer.save()
-
-                return Response({"Status": True, "Data": serializer.data})
-            return Response(
-                {"Status": False, "Errors": serializer.errors},
-                status=status.HTTP_400_BAD_REQUEST,
-            )
-
         except Contact.DoesNotExist:
             return Response(
                 {"Status": False, "Errors": "Контакт не найден."},
                 status=status.HTTP_404_NOT_FOUND,
             )
+
+        serializer = ContactSerializer(contact, data=request.data, partial=True)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"Status": True, "Data": serializer.data})
+
+        return Response(
+            {"Status": False, "Errors": serializer.errors},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
 
     def delete(self, request, *args, **kwargs):
         contact_id = request.data.get("id")
@@ -216,7 +216,7 @@ class ShopDetailView(views.APIView):
     Delete: Удалить магазин пользователя.
     """
 
-    permission_classes = [IsAuthenticatedAndShopUser]
+    permission_classes = [IsShopUser]
 
     def get(self, request, *args, **kwargs):
         try:
@@ -293,11 +293,11 @@ class ShopDataView(views.APIView):
     Загрузка и выгрузка товаров магазина.
 
     Get: Выгрузить товары магазина.
-    Post: Загрузить товары магазина.
+    Post: Загрузить товары магазина с использованием Celery.
     """
 
     pagination_class = ProductShopPagination
-    permission_classes = [IsAuthenticatedAndShopUser]
+    permission_classes = [IsShopUser]
 
     @staticmethod
     def _process_url(url):
@@ -383,7 +383,7 @@ class ShopDataView(views.APIView):
             return check_url
 
         # Вызов Celery задачи
-        task_result = do_import.delay(url, request.user.id)
+        task_result = do_import_celery.delay(url, request.user.id)
         task_id = task_result.id
 
         # Создание URL для просмотра результатов
@@ -398,8 +398,8 @@ class ShopDataView(views.APIView):
         )
 
 
-class ProductDetailView(views.APIView, ProductPagination):
-    """Получение подробной информации о товарах на основе заданных фильтров."""
+class ProductInShopView(views.APIView, ProductPagination):
+    """Получение подробной информации о товарах в магазинах на основе заданных фильтров."""
 
     pagination_class = ProductPagination
     permission_classes = [permissions.IsAuthenticated]
@@ -442,7 +442,7 @@ class BuyerBasketView(views.APIView):
     Delete: Удалить товары из корзины покупателя.
     """
 
-    permission_classes = [IsAuthenticatedAndBuyerUser]
+    permission_classes = [IsBuyerUser]
 
     @staticmethod
     def _process_items(items):
@@ -643,7 +643,7 @@ class BuyerOrderView(views.APIView):
     Post: Оформить заказ из корзины и отправить письмо покупателю.
     """
 
-    permission_classes = [IsAuthenticatedAndBuyerUser]
+    permission_classes = [IsBuyerUser]
 
     def get(self, request, *args, **kwargs):
         order = (
@@ -761,7 +761,7 @@ class BuyerOrderView(views.APIView):
 class ShopOrderView(views.APIView):
     """Получение заказов магазина."""
 
-    permission_classes = [IsAuthenticatedAndShopUser]
+    permission_classes = [IsShopUser]
 
     def get(self, request, *args, **kwargs):
         orders = (
@@ -779,3 +779,86 @@ class ShopOrderView(views.APIView):
 
         serializer = OrderSerializer(orders, many=True)
         return Response({"Status": True, "Orders": serializer.data})
+
+
+class ProductDetailView(views.APIView):
+    """
+    Управление продуктом.
+
+    Get: Получить продукт.
+    Post: Добавить продукт.
+    Patch: Изменить продукт c использованием Celery.
+    """
+
+    permission_classes = [IsShopUser]
+
+    def get(self, request, *args, **kwargs):
+        product_id = request.data.get("product_id")
+
+        if not product_id or not product_id.isdigit():
+            return Response(
+                {"Status": False, "Errors": "product_id обязательное числовое поле."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            product = Product.objects.get(id=product_id)
+        except Product.DoesNotExist:
+            return Response(
+                {"Status": False, "Errors": "Продукт не найден."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        serializer = ProductWithImageSerializer(product, context={"request": request})
+        return Response({"Status": True, "Data": serializer.data})
+
+    def post(self, request, *args, **kwargs):
+        serializer = ProductWithImageSerializer(
+            data=request.data, context={"request": request}
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return Response(
+                {"Status": True, "Data": serializer.data},
+                status=status.HTTP_201_CREATED,
+            )
+        return Response(
+            {"Status": False, "Errors": serializer.errors},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    def patch(self, request):
+        product_id = request.data.get("product_id")
+
+        if not product_id or not product_id.isdigit():
+            return Response(
+                {"Status": False, "Errors": "product_id обязательное числовое поле."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        try:
+            product = Product.objects.get(id=product_id)
+        except Product.DoesNotExist:
+            return Response(
+                {"Status": False, "Errors": "Продукт не найден."},
+                status=status.HTTP_404_NOT_FOUND,
+            )
+
+        if request.data.get("image"):
+            # product.delete_cached_files()  # Без Celery
+            # Запуск Celery задачи для удаления файлов
+            delete_cached_files_celery.delay(
+                product.id, product._meta.app_label, product._meta.model_name
+            )
+
+        serializer = ProductWithImageSerializer(
+            product, data=request.data, partial=True, context={"request": request}
+        )
+        if serializer.is_valid():
+            serializer.save()
+            return Response({"Status": True, "Data": serializer.data})
+
+        return Response(
+            {"Status": False, "Errors": serializer.errors},
+            status=status.HTTP_400_BAD_REQUEST,
+        )

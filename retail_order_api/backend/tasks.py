@@ -1,4 +1,5 @@
 from celery import shared_task
+from django.apps import apps
 from django.db import IntegrityError, transaction
 from requests import get
 from yaml import SafeLoader
@@ -16,7 +17,7 @@ from backend.models import (
 
 
 @shared_task()
-def do_import(url, user_id):
+def do_import_celery(url, user_id):
     try:
         stream = get(url).content
         data = load_yaml(stream, Loader=SafeLoader)
@@ -92,6 +93,13 @@ def do_import(url, user_id):
             return {"Status": True, "Message": "Магазин успешно обновлен."}
         except (IntegrityError, TypeError, AttributeError):
             return {"Status": False, "Errors": "Не указаны все необходимые аргументы."}
+
+
+@shared_task
+def delete_cached_files_celery(instance_id, app_label, model_name):
+    model = apps.get_model(app_label, model_name)
+    instance = model.objects.get(id=instance_id)
+    instance.delete_cached_files()
 
 
 """Отладка файл с ПК"""

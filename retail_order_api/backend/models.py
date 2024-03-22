@@ -1,28 +1,17 @@
+import os
+
 from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractUser
 from django.contrib.auth.validators import UnicodeUsernameValidator
 from django.core.validators import MaxValueValidator, MinValueValidator
 from django.db import models
 from django.utils.translation import gettext_lazy as _
+from imagekit.models import ImageSpecField
+from imagekit.processors import Adjust, ResizeToFill, ResizeToFit
+from pytils.translit import slugify
 
-STATE_CHOICES = (
-    ("basket", "Статус корзины"),
-    ("new", "Новый"),
-    ("confirmed", "Подтвержден"),
-    ("assembled", "Собран"),
-    ("sent", "Отправлен"),
-    ("delivered", "Доставлен"),
-    ("canceled", "Отменен"),
-)
-
-USER_TYPE_CHOICES = (
-    ("shop", "Магазин"),
-    ("buyer", "Покупатель"),
-)
-
-DEFAULT_QUANTITY_ORDER_ITEM = 1
-MIN_QUANTITY_ORDER_ITEM = 1
-MAX_QUANTITY_ORDER_ITEM = 100
+from backend.utils import RemoveAfterCloseFileProxy, get_path_upload_product_photo
+from retail_order_api import settings
 
 
 class CustomUserManager(BaseUserManager):
@@ -87,7 +76,7 @@ class CustomUser(AbstractUser):
     )
     type = models.CharField(
         verbose_name="Тип пользователя",
-        choices=USER_TYPE_CHOICES,
+        choices=settings.USER_TYPE_CHOICES,
         max_length=5,
         default="buyer",
     )
@@ -201,6 +190,9 @@ class Product(models.Model):
     """
 
     name = models.CharField(verbose_name="Название", max_length=90, unique=True)
+    slug = models.SlugField(
+        verbose_name="Слаг", max_length=200, blank=True, unique=True
+    )
     category = models.ForeignKey(
         Category,
         verbose_name="Категория",
@@ -209,10 +201,83 @@ class Product(models.Model):
         on_delete=models.CASCADE,
     )
 
+    image = models.ImageField(
+        verbose_name="Фото",
+        upload_to=get_path_upload_product_photo,
+        null=True,
+        blank=True,
+        default=settings.DEFAULT_PATH_PRODUCT_IMAGE,
+    )
+
+    image_small = ImageSpecField(
+        source="image",
+        processors=[ResizeToFill(50, 50), Adjust(contrast=1.2, sharpness=1.1)],
+        format="JPEG",
+        options={"quality": 80},
+    )
+
+    image_medium = ImageSpecField(
+        source="image",
+        processors=[ResizeToFit(300, 200), Adjust(contrast=1.2, sharpness=1.1)],
+        format="JPEG",
+        options={"quality": 80},
+    )
+
+    image_big = ImageSpecField(
+        source="image",
+        processors=[
+            ResizeToFit(640, 480),
+            Adjust(contrast=1.2, sharpness=1.1),
+        ],
+        format="JPEG",
+        options={"quality": 80},
+    )
+
     class Meta:
         verbose_name = "Продукт"
         verbose_name_plural = "Список продуктов"
         ordering = ("-name",)
+
+    def save(self, *args, **kwargs):
+        self.slug = slugify(self.name)
+        super(Product, self).save(*args, **kwargs)
+
+    def delete(self, *args, **kwargs):
+        self.delete_cached_files()
+
+        # Удаляем директории исходного и производных файлов
+        original_image_dir = os.path.dirname(os.path.dirname(self.image_small.path))
+        derivative_image_dir = os.path.dirname(self.image.path)
+        os.rmdir(original_image_dir)
+        os.rmdir(derivative_image_dir)
+
+        super().delete(*args, **kwargs)
+
+    def delete_cached_files(self):
+        """
+        Удаляет кэшированные файлы для данного продукта.
+        """
+        if self.image.name != settings.DEFAULT_PATH_PRODUCT_IMAGE:
+            derivative_image_dir = os.path.dirname(self.image_small.path)
+            RemoveAfterCloseFileProxy(
+                self.image.file
+            )  # Закрываем и удаляем исходный файл
+
+            for field_name in ["image_small", "image_medium", "image_big"]:
+                field = getattr(self, field_name)
+                try:
+                    file = field.file
+                except FileNotFoundError:
+                    continue
+                cache_backend = field.cachefile_backend
+                cache_backend.cache.delete(cache_backend.get_key(file))
+                RemoveAfterCloseFileProxy(file)  # Закрываем и удаляем файл
+
+            # Удаляем пустую директорию производных файлов
+            try:
+                os.rmdir(derivative_image_dir)
+            except OSError:
+                pass
 
     def __str__(self):
         return self.name
@@ -332,7 +397,7 @@ class Order(models.Model):
     )
     date = models.DateTimeField(verbose_name="Дата и время заказа", auto_now_add=True)
     state = models.CharField(
-        verbose_name="Статус", choices=STATE_CHOICES, max_length=20
+        verbose_name="Статус", choices=settings.STATE_CHOICES, max_length=20
     )
 
     class Meta:
@@ -363,10 +428,10 @@ class OrderItem(models.Model):
     quantity = models.PositiveIntegerField(
         verbose_name="Количество",
         validators=[
-            MinValueValidator(MIN_QUANTITY_ORDER_ITEM),
-            MaxValueValidator(MAX_QUANTITY_ORDER_ITEM),
+            MinValueValidator(settings.MIN_QUANTITY_ORDER_ITEM),
+            MaxValueValidator(settings.MAX_QUANTITY_ORDER_ITEM),
         ],
-        default=DEFAULT_QUANTITY_ORDER_ITEM,
+        default=settings.DEFAULT_QUANTITY_ORDER_ITEM,
     )
 
     class Meta:

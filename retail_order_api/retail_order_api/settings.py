@@ -26,6 +26,7 @@ INSTALLED_APPS = [
     "social_django",  # djoser social auth
     "rest_framework_simplejwt",
     "drf_spectacular",
+    "imagekit",
     "baton.autodiscover",
 ]
 
@@ -43,9 +44,7 @@ MIDDLEWARE = [
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [
-            BASE_DIR / "templates",
-        ],
+        "DIRS": [os.path.join(BASE_DIR, "templates")],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -97,7 +96,11 @@ USE_I18N = True
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
-STATIC_URL = "static/"
+STATIC_URL = "/static/"
+STATIC_ROOT = os.path.join(BASE_DIR, "static")
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = os.path.join(BASE_DIR, "media")
 
 DEFAULT_AUTO_FIELD = "django.db.models.BigAutoField"
 
@@ -277,6 +280,39 @@ BATON = {
         },
     ),
 }
+
+# django-imagekit
+IMAGEKIT_CACHEFILE_DIR = (
+    "CACHE"  # Каталог, в который будут кэшироваться файлы изображений
+)
+IMAGEKIT_SPEC_CACHEFILE_NAMER = (
+    "backend.utils.custom_source_name_as_path"  # Генерация пути производных файлов
+)
+
+# Константы backend
+STATE_CHOICES = (
+    ("basket", "Статус корзины"),
+    ("new", "Новый"),
+    ("confirmed", "Подтвержден"),
+    ("assembled", "Собран"),
+    ("sent", "Отправлен"),
+    ("delivered", "Доставлен"),
+    ("canceled", "Отменен"),
+)
+USER_TYPE_CHOICES = (
+    ("shop", "Магазин"),
+    ("buyer", "Покупатель"),
+)
+DEFAULT_QUANTITY_ORDER_ITEM = 1
+MIN_QUANTITY_ORDER_ITEM = 1
+MAX_QUANTITY_ORDER_ITEM = 100
+DEFAULT_PATH_PRODUCT_IMAGE = "default_images/products/default_image.jpg"
+WHITELISTED_IMAGE_TYPES = {
+    ".jpeg": "image/jpeg",
+    ".jpg": "image/jpeg",
+    ".png": "image/png",
+}
+IMAGE_MAX_SIZE_MB = 3
 
 if DEBUG:
     # debug_toolbar

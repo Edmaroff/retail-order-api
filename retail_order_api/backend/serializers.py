@@ -1,7 +1,9 @@
+from os.path import splitext
+
+from django.core.exceptions import ValidationError
 from rest_framework import serializers
 
 from backend.models import (
-    DEFAULT_QUANTITY_ORDER_ITEM,
     Category,
     Contact,
     Order,
@@ -11,6 +13,7 @@ from backend.models import (
     ProductParameter,
     Shop,
 )
+from retail_order_api import settings
 
 
 class ContactSerializer(serializers.ModelSerializer):
@@ -84,13 +87,49 @@ class ShopListSerializer(serializers.ModelSerializer):
         ordering = ["name"]
 
 
-class ProductListSerializer(serializers.ModelSerializer):
+class ProductWithoutImageSerializer(serializers.ModelSerializer):
     category = serializers.StringRelatedField()
 
     class Meta:
         model = Product
         fields = ["id", "name", "category"]
         read_only_fields = ["id"]
+
+
+class ProductWithImageSerializer(serializers.ModelSerializer):
+    image_small = serializers.ImageField(read_only=True)
+    image_medium = serializers.ImageField(read_only=True)
+    image_big = serializers.ImageField(read_only=True)
+    category_name = serializers.CharField(source="category.name", read_only=True)
+
+    class Meta:
+        model = Product
+        fields = [
+            "id",
+            "name",
+            "category",
+            "category_name",
+            "image",
+            "image_small",
+            "image_medium",
+            "image_big",
+        ]
+
+    def validate_image(self, image):
+        if image is None:
+            raise ValidationError("Изображение не было предоставлено.")
+        if image.size > settings.IMAGE_MAX_SIZE_MB * 1024 * 1024:
+            raise ValidationError(
+                f"Максимальный размер изображения равен {settings.IMAGE_MAX_SIZE_MB} МБ."
+            )
+        extension = splitext(image.name)[1]
+        if extension not in settings.WHITELISTED_IMAGE_TYPES.keys():
+            raise ValidationError(f"Формат изображения {extension} не поддерживается.")
+        if image.content_type not in settings.WHITELISTED_IMAGE_TYPES.values():
+            raise ValidationError(
+                f"Недопустимый тип содержимого изображения: {image.content_type}."
+            )
+        return image
 
 
 class ProductParameterSerializer(serializers.ModelSerializer):
@@ -102,7 +141,7 @@ class ProductParameterSerializer(serializers.ModelSerializer):
 
 
 class ProductInfoSerializer(serializers.ModelSerializer):
-    product = ProductListSerializer(read_only=True)
+    product = ProductWithoutImageSerializer(read_only=True)
     product_parameters = ProductParameterSerializer(read_only=True, many=True)
 
     class Meta:
@@ -133,7 +172,7 @@ class OrderItemSerializer(serializers.ModelSerializer):
         Проверяет количество добавляемого в корзину продукта и доступное количество товара у
         продавца.
         """
-        requested_quantity = data.get("quantity", DEFAULT_QUANTITY_ORDER_ITEM)
+        requested_quantity = data.get("quantity", settings.DEFAULT_QUANTITY_ORDER_ITEM)
         available_quantity = data.get("product_info").quantity
 
         if requested_quantity > available_quantity:

@@ -1,11 +1,15 @@
+import os
 from uuid import uuid4
 
+from django.conf import settings
 from django.contrib.auth import get_user_model
+from django.core.files.utils import FileProxyMixin
+from imagekit.utils import suggest_extension
 from social_core.pipeline.user import USER_FIELDS
 from social_core.utils import module_member, slugify
 
 
-def custom_get_username(strategy, details, backend, user=None, *args, **kwargs):
+def custom_get_username(strategy, details, backend, user=None):
     """
     Метод является модифицированной версией social_core.pipeline.user.get_username.
 
@@ -67,3 +71,68 @@ def custom_get_username(strategy, details, backend, user=None, *args, **kwargs):
     else:
         final_username = storage.user.get_username(user)
     return {"username": final_username}
+
+
+def custom_source_name_as_path(generator):
+    """
+    Метод является модифицированной версией imagekit.cachefiles.namers.source_name_as_path.
+
+    Генерация пути к измененному файлу
+
+    Пример исходного файла: images/products/nazvanie-produkta/Screenshot_1.jpg
+    Пример измененного файла: images/products/nazvanie-produkta/Screenshot_1/{width}x{height}.jpg,
+    где {width} и {height} - ширина и высота изображения.
+    """
+    source_filename = getattr(generator.source, "name", None)
+    height, width = 0, 0
+    for processor in generator.processors:
+        if hasattr(processor, "height") and hasattr(processor, "width"):
+            height = processor.height
+            width = processor.width
+            break
+
+    if source_filename is None or os.path.isabs(source_filename):
+        dir_cache = settings.IMAGEKIT_CACHEFILE_DIR
+    else:
+        dir_cache = os.path.join(
+            settings.IMAGEKIT_CACHEFILE_DIR, os.path.splitext(source_filename)[0]
+        )
+
+    ext = suggest_extension(source_filename or "", generator.format)
+
+    return os.path.normpath(os.path.join(dir_cache, f"{width}x{height}{ext}"))
+
+
+def get_path_upload_avatar(instance, file):
+    """
+    Построение пути к файлу, format: (media)/images/avatars/user_id/photo.jpg
+    """
+    return f"images/avatars/user_{instance.user.id}/{file}"
+
+
+def get_path_upload_product_photo(instance, file):
+    """
+    Построение пути к файлу, format: (media)/images/products/slug(product_name)/photo.jpg
+    """
+    return f"images/products/{instance.slug}/{file}"
+
+
+class RemoveAfterCloseFileProxy(FileProxyMixin):
+    """
+    Прокси-объект для работы с файлом, который будет удален после его закрытия.
+    """
+
+    def __init__(self, file):
+        self.file = file
+        self.name = file.name
+
+    def close(self):
+        if not self.closed:
+            self.file.close()
+            try:
+                os.remove(self.name)
+            except FileNotFoundError:
+                pass
+
+    def __del__(self):
+        self.close()

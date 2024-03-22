@@ -8,8 +8,9 @@ from backend.views import (
     CeleryTaskResultView,
     CustomProviderAuthView,
     ProductDetailView,
+    ProductInShopView,
     ProductListView,
-    RedirectSocial,
+    RedirectSocialView,
     ShopDataView,
     ShopDetailView,
     ShopListView,
@@ -35,6 +36,7 @@ user_urls = [
     path("shops/", ShopListView.as_view(), name="shops"),
     path("products/", ProductListView.as_view(), name="products"),
     path("products/detail/", ProductDetailView.as_view(), name="products_detail"),
+    path("products-in-shops/", ProductInShopView.as_view(), name="products_in_shops"),
 ]
 
 # URL для просмотра результатов задач Celery
@@ -47,13 +49,14 @@ task_urls = [
 djoser_urls = [
     path("auth/", include("djoser.urls")),
     path("auth/", include("djoser.urls.jwt")),
-    path('auth/social/redirect/', RedirectSocial.as_view()),
+    path("auth/social/redirect/", RedirectSocialView.as_view()),
     re_path(
         r"^auth/social/(?P<provider>\S+)/$",
         CustomProviderAuthView.as_view(),
         name="provider-auth",
     ),
 ]
+
 
 urlpatterns = [
     path("shop/", include(shop_urls)),

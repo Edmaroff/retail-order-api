@@ -2,7 +2,7 @@ from rest_framework import permissions
 from rest_framework.exceptions import PermissionDenied
 
 
-class IsAuthenticatedAndShopUser(permissions.BasePermission):
+class IsShopUser(permissions.BasePermission):
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
@@ -16,7 +16,7 @@ class IsAuthenticatedAndShopUser(permissions.BasePermission):
         return True
 
 
-class IsAuthenticatedAndBuyerUser(permissions.BasePermission):
+class IsBuyerUser(permissions.BasePermission):
     def has_permission(self, request, view):
         if not request.user.is_authenticated:
             return False
