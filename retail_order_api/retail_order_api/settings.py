@@ -2,14 +2,16 @@ import os
 from datetime import timedelta
 from pathlib import Path
 
-from dotenv import load_dotenv
-
-load_dotenv()
+import environ
 
 BASE_DIR = Path(__file__).resolve().parent.parent
-SECRET_KEY = os.getenv("SECRET_KEY")
-DEBUG = os.getenv("DEBUG").lower() == "true"
-ALLOWED_HOSTS = os.getenv("ALLOWED_HOSTS").split(",")
+
+env = environ.Env()
+environ.Env.read_env(os.path.join(BASE_DIR, ".env"))
+
+SECRET_KEY = env.str("SECRET_KEY", "")
+DEBUG = env.bool("DEBUG", True)
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS")
 
 INSTALLED_APPS = [
     "baton",
@@ -44,7 +46,7 @@ MIDDLEWARE = [
 TEMPLATES = [
     {
         "BACKEND": "django.template.backends.django.DjangoTemplates",
-        "DIRS": [os.path.join(BASE_DIR, "templates")],
+        "DIRS": [],
         "APP_DIRS": True,
         "OPTIONS": {
             "context_processors": [
@@ -65,12 +67,12 @@ ROOT_URLCONF = "retail_order_api.urls"
 
 DATABASES = {
     "default": {
-        "ENGINE": os.getenv("DB_ENGINE"),
-        "NAME": os.getenv("DB_NAME"),
-        "HOST": os.getenv("DB_HOST"),
-        "PORT": os.getenv("DB_PORT"),
-        "USER": os.getenv("DB_USER"),
-        "PASSWORD": os.getenv("DB_PASSWORD"),
+        "ENGINE": env.str("DB_ENGINE", "django.db.backends.sqlite3"),
+        "NAME": env.str("DB_NAME", os.path.join(BASE_DIR, "db.sqlite3")),
+        "USER": env.str("DB_USER", "user"),
+        "PASSWORD": env.str("DB_PASSWORD", "password"),
+        "HOST": env.str("DB_HOST", "localhost"),
+        "PORT": env.str("DB_PORT", "5432"),
     }
 }
 
@@ -129,12 +131,12 @@ REST_FRAMEWORK = {
 
 
 # SMTP
-EMAIL_BACKEND = os.getenv("EMAIL_BACKEND")
-EMAIL_HOST = os.getenv("EMAIL_HOST")
-EMAIL_HOST_USER = os.getenv("EMAIL_HOST_USER")
-EMAIL_HOST_PASSWORD = os.getenv("EMAIL_HOST_PASSWORD")
-EMAIL_PORT = os.getenv("EMAIL_PORT")
-EMAIL_USE_TLS = os.getenv("DEBUG").lower() == "true"
+EMAIL_BACKEND = env.str("EMAIL_BACKEND", "")
+EMAIL_HOST = env.str("EMAIL_HOST", "")
+EMAIL_HOST_USER = env.str("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = env.str("EMAIL_HOST_PASSWORD", "")
+EMAIL_PORT = env.str("EMAIL_PORT", "")
+EMAIL_USE_TLS = env.str("EMAIL_USE_TLS", "")
 
 
 # Djoser
@@ -174,12 +176,12 @@ SOCIAL_AUTH_PIPELINE = (
 
 # Google OAuth2
 SOCIAL_AUTH_USER_MODEL = "backend.CustomUser"
-SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = os.getenv("SOCIAL_AUTH_GOOGLE_OAUTH2_KEY")
-SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = os.getenv("SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET")
+SOCIAL_AUTH_GOOGLE_OAUTH2_KEY = env.str("SOCIAL_AUTH_GOOGLE_OAUTH2_KEY", "")
+SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET = env.str("SOCIAL_AUTH_GOOGLE_OAUTH2_SECRET", "")
 
 # Github OAuth2
-SOCIAL_AUTH_GITHUB_KEY = os.getenv("SOCIAL_AUTH_GITHUB_KEY")
-SOCIAL_AUTH_GITHUB_SECRET = os.getenv("SOCIAL_AUTH_GITHUB_SECRET")
+SOCIAL_AUTH_GITHUB_KEY = env.str("SOCIAL_AUTH_GITHUB_KEY", "")
+SOCIAL_AUTH_GITHUB_SECRET = env.str("SOCIAL_AUTH_GITHUB_SECRET", "")
 SOCIAL_AUTH_GITHUB_SCOPE = ["read:user", "user:email"]
 
 AUTHENTICATION_BACKENDS = (
@@ -205,8 +207,8 @@ SPECTACULAR_SETTINGS = {
 }
 
 # Celery
-CELERY_RESULT_BACKEND = os.getenv("CELERY_RESULT_BACKEND")
-CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL")
+CELERY_RESULT_BACKEND = env.str("CELERY_RESULT_BACKEND", "redis://localhost:6379")
+CELERY_BROKER_URL = env.str("CELERY_BROKER_URL", "redis://localhost:6379")
 
 
 # django-baton
