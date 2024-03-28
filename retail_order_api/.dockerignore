@@ -1,0 +1,27 @@
+### main_dockerignore template
+# Personal
+manual.md
+initial_task.md
+README.md
+static/
+
+# Git
+.gitignore
+.git
+
+# Environments
+venv_wsl
+#.env
+.venv
+env/
+venv/
+venv_wsl/
+ENV/
+env.bak/
+venv.bak/
+
+# PyCharm
+.idea/
+
+# Byte-compiled / optimized / DLL files
+__pycache__/

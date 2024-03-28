@@ -52,7 +52,7 @@ class CustomUserAdmin(UserAdmin):
         ),
         (
             _("Permissions"),
-            {"fields": ("is_superuser", "groups", "user_permissions")},
+            {"fields": ("is_active", "is_superuser", "groups", "user_permissions")},
         ),
         (_("Important dates"), {"fields": ("last_login", "date_joined")}),
     ]

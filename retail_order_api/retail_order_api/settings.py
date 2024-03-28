@@ -64,15 +64,14 @@ TEMPLATES = [
 
 WSGI_APPLICATION = "retail_order_api.wsgi.application"
 ROOT_URLCONF = "retail_order_api.urls"
-
 DATABASES = {
     "default": {
-        "ENGINE": env.str("DB_ENGINE", "django.db.backends.sqlite3"),
-        "NAME": env.str("DB_NAME", os.path.join(BASE_DIR, "db.sqlite3")),
-        "USER": env.str("DB_USER", "user"),
-        "PASSWORD": env.str("DB_PASSWORD", "password"),
-        "HOST": env.str("DB_HOST", "localhost"),
-        "PORT": env.str("DB_PORT", "5432"),
+        "ENGINE": env.str("POSTGRES_ENGINE", "django.db.backends.sqlite3"),
+        "NAME": env.str("POSTGRES_DB", os.path.join(BASE_DIR, "db.sqlite3")),
+        "USER": env.str("POSTGRES_USER", "user"),
+        "PASSWORD": env.str("POSTGRES_PASSWORD", "password"),
+        "HOST": env.str("POSTGRES_HOST", "localhost"),
+        "PORT": env.str("POSTGRES_PORT", "5432"),
     }
 }
 
@@ -209,7 +208,6 @@ SPECTACULAR_SETTINGS = {
 # Celery
 CELERY_RESULT_BACKEND = env.str("CELERY_RESULT_BACKEND", "redis://localhost:6379")
 CELERY_BROKER_URL = env.str("CELERY_BROKER_URL", "redis://localhost:6379")
-
 
 # django-baton
 BATON = {

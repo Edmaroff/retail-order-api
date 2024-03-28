@@ -284,7 +284,7 @@ class TestShopDetailView:
 class TestProductDetailView:
     """Тесты для ProductDetailView."""
 
-    url = reverse("backend:products_detail")
+    url = reverse("backend:products_in_shops")
 
     @staticmethod
     def assert_response(response, expected_ids):
