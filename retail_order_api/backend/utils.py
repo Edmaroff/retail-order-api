@@ -103,13 +103,6 @@ def custom_source_name_as_path(generator):
     return os.path.normpath(os.path.join(dir_cache, f"{width}x{height}{ext}"))
 
 
-def get_path_upload_avatar(instance, file):
-    """
-    Построение пути к файлу, format: (media)/images/avatars/user_id/photo.jpg
-    """
-    return f"images/avatars/user_{instance.user.id}/{file}"
-
-
 def get_path_upload_product_photo(instance, file):
     """
     Построение пути к файлу, format: (media)/images/products/slug(product_name)/photo.jpg
