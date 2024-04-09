@@ -8,6 +8,7 @@ from django.urls import reverse
 from django.views import View
 from django_filters import rest_framework
 from djoser.social.views import ProviderAuthView
+from drf_spectacular.utils import extend_schema
 from rest_framework import filters, generics, permissions, status, views
 from rest_framework.response import Response
 from social_django.utils import load_backend, load_strategy
@@ -51,6 +52,7 @@ class CustomProviderAuthView(ProviderAuthView):
     def get(self, request, *args, **kwargs):
         """
         Метод является модифицированной версией ProviderAuthView.get
+        Получает URL для авторизации через социальную сеть.
 
         Изменения:
         - Для получения redirect_uri используются настройки проекта вместо GET-параметров.
@@ -75,6 +77,7 @@ class RedirectSocialView(View):
         return JsonResponse(json_obj)
 
 
+@extend_schema(tags=["Celery результат"])
 class CeleryTaskResultView(views.APIView):
     """Получение результата задачи celery по идентификатору."""
 
@@ -90,8 +93,9 @@ class CeleryTaskResultView(views.APIView):
         return Response(result)
 
 
+@extend_schema(tags=["Магазин"])
 class ShopListView(generics.ListAPIView):
-    """Получение списка активных магазинов."""
+    """Получение списка магазинов с пагинацией и фильтрацией с помощью GET-параметра search."""
 
     queryset = Shop.objects.filter(state=True)
     serializer_class = ShopListSerializer
@@ -100,8 +104,9 @@ class ShopListView(generics.ListAPIView):
     search_fields = ["name"]
 
 
+@extend_schema(tags=["Категории"])
 class CategoryListView(generics.ListAPIView):
-    """Получение списка категорий."""
+    """Получение списка категорий с пагинацией и фильтрацией с помощью GET-параметра search."""
 
     queryset = Category.objects.all()
     serializer_class = CategoryListSerializer
@@ -110,30 +115,30 @@ class CategoryListView(generics.ListAPIView):
     search_fields = ["name"]
 
 
+@extend_schema(tags=["Продукт"])
 class ProductListView(generics.ListAPIView):
-    """Получение списка товаров."""
+    """
+    Получение списка продуктов с пагинацией и фильтрацией с помощью GET-параметров:
+    - product - поиск продуктов по подстроке в их названии;
+    - category - поиск продуктов по подстроке в названии категории.
+    """
 
     queryset = Product.objects.all()
-    # serializer_class = ProductSerializer
     serializer_class = ProductWithImageSerializer
     pagination_class = ProductPagination
     filter_backends = [rest_framework.DjangoFilterBackend]
     filterset_class = ProductFilter
 
 
+@extend_schema(tags=["Контакты покупателя"])
 class BuyerContactsView(views.APIView):
-    """
-    Управление контактами пользователя.
-
-    Get: Получить контакты пользователя.
-    Post: Добавить контакт пользователя.
-    Patch: Изменить контакт пользователя.
-    Delete: Удалить контакт пользователя.
-    """
+    """Управление контактами покупателя."""
 
     permission_classes = [IsBuyerUser]
 
     def get(self, request):
+        """Получает список контактов покупателя."""
+
         contacts = Contact.objects.filter(user=request.user)
 
         if contacts.exists():
@@ -146,6 +151,7 @@ class BuyerContactsView(views.APIView):
         )
 
     def post(self, request, *args, **kwargs):
+        """Создает контакт покупателя."""
         serializer = ContactSerializer(data=request.data, context={"request": request})
 
         if serializer.is_valid():
@@ -160,6 +166,7 @@ class BuyerContactsView(views.APIView):
         )
 
     def patch(self, request, *args, **kwargs):
+        """Обновляет существующий контакт покупателя."""
         contact_id = request.data.get("id")
 
         if not contact_id or not contact_id.isdigit():
@@ -187,6 +194,7 @@ class BuyerContactsView(views.APIView):
         )
 
     def delete(self, request, *args, **kwargs):
+        """Удаляет контакт покупателя."""
         contact_id = request.data.get("id")
 
         if not contact_id or not contact_id.isdigit():
@@ -206,19 +214,14 @@ class BuyerContactsView(views.APIView):
             )
 
 
+@extend_schema(tags=["Магазин"])
 class ShopDetailView(views.APIView):
-    """
-    Управление магазином пользователя.
-
-    Get: Получить магазин пользователя.
-    Post: Добавить магазин пользователя.
-    Patch: Изменить магазин пользователя.
-    Delete: Удалить магазин пользователя.
-    """
+    """Управление магазином пользователя."""
 
     permission_classes = [IsShopUser]
 
     def get(self, request, *args, **kwargs):
+        """Получает магазин пользователя."""
         try:
             shop = Shop.objects.get(user=request.user)
             serializer = ShopDetailSerializer(shop)
@@ -230,6 +233,7 @@ class ShopDetailView(views.APIView):
             )
 
     def post(self, request, *args, **kwargs):
+        """Создает магазин пользователя."""
         user_shop = Shop.objects.filter(user=request.user).first()
 
         if user_shop:
@@ -258,6 +262,7 @@ class ShopDetailView(views.APIView):
         )
 
     def patch(self, request, *args, **kwargs):
+        """Обновляет магазин пользователя."""
         try:
             shop = Shop.objects.get(user=request.user)
         except Shop.DoesNotExist:
@@ -277,6 +282,7 @@ class ShopDetailView(views.APIView):
         )
 
     def delete(self, request, *args, **kwargs):
+        """Удаляет магазин пользователя."""
         try:
             shop = Shop.objects.get(user=request.user)
             shop.delete()
@@ -288,19 +294,16 @@ class ShopDetailView(views.APIView):
             )
 
 
+@extend_schema(tags=["Магазин"])
 class ShopDataView(views.APIView):
-    """
-    Загрузка и выгрузка товаров магазина.
-
-    Get: Выгрузить товары магазина.
-    Post: Загрузить товары магазина с использованием Celery.
-    """
+    """Загрузка и выгрузка товаров магазина."""
 
     pagination_class = ProductShopPagination
     permission_classes = [IsShopUser]
 
     @staticmethod
     def _process_url(url):
+        """Валидация URL."""
         validate_url = URLValidator()
 
         if not url:
@@ -317,6 +320,8 @@ class ShopDataView(views.APIView):
             )
 
     def get(self, request, *args, **kwargs):
+        """Получает информацию о всех товарах магазина."""
+
         shop = (
             Shop.objects.filter(user=request.user)
             .prefetch_related("categories")
@@ -376,6 +381,7 @@ class ShopDataView(views.APIView):
         return paginator.get_paginated_response({"Status": True, "Data": data})
 
     def post(self, request, *args, **kwargs):
+        """Загрузить товары магазина из файла .yaml с использованием Celery."""
         url = request.data.get("url")
         check_url = self._process_url(url)
 
@@ -398,13 +404,14 @@ class ShopDataView(views.APIView):
         )
 
 
+@extend_schema(tags=["Продукт"])
 class ProductInShopView(views.APIView, ProductPagination):
-    """Получение подробной информации о товарах в магазинах на основе заданных фильтров."""
 
     pagination_class = ProductPagination
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
+        """Получение подробной информации о товарах в магазинах на основе заданных фильтров."""
         query = Q(shop__state=True)
 
         shop_id = request.query_params.get("shop_id")
@@ -432,20 +439,15 @@ class ProductInShopView(views.APIView, ProductPagination):
         return self.get_paginated_response(serializer.data)
 
 
+@extend_schema(tags=["Корзина"])
 class BuyerBasketView(views.APIView):
-    """
-    Управление корзиной покупателя.
-
-    Get: Получить товары из корзины покупателя.
-    Post: Добавить товары в корзину покупателя.
-    Patch: Изменить количество товара в корзине покупателя.
-    Delete: Удалить товары из корзины покупателя.
-    """
+    """Управление корзиной покупателя."""
 
     permission_classes = [IsBuyerUser]
 
     @staticmethod
     def _process_items(items):
+        """Валидация и обработка списка продуктов в корзине покупателя."""
         if not items:
             return Response(
                 {
@@ -471,6 +473,7 @@ class BuyerBasketView(views.APIView):
         return items
 
     def get(self, request, *args, **kwargs):
+        """Получает список товаров в корзине покупателя."""
         basket = (
             Order.objects.filter(user_id=request.user.id, state="basket")
             .prefetch_related(
@@ -490,6 +493,7 @@ class BuyerBasketView(views.APIView):
         return Response({"Status": True, "Order": serializer.data})
 
     def post(self, request, *args, **kwargs):
+        """Добавляет товары в корзину покупателя."""
         items = request.data.get("items")
         items = self._process_items(items)
         if isinstance(items, Response):
@@ -526,6 +530,7 @@ class BuyerBasketView(views.APIView):
         )
 
     def patch(self, request, *args, **kwargs):
+        """Изменяет количество товаров в корзине покупателя."""
         items = request.data.get("items")
         items = self._process_items(items)
         if isinstance(items, Response):
@@ -593,6 +598,7 @@ class BuyerBasketView(views.APIView):
             return Response({"Status": True, "Обновлено объектов": objects_updated})
 
     def delete(self, request, *args, **kwargs):
+        """Удаляет товары из корзины покупателя."""
         order_item_ids = request.data.get("items")
 
         if not order_item_ids:
@@ -635,17 +641,14 @@ class BuyerBasketView(views.APIView):
         return Response({"Status": True, "Удалено товаров": deleted_count})
 
 
+@extend_schema(tags=["Заказы покупателя"])
 class BuyerOrderView(views.APIView):
-    """
-    Управление заказом покупателя.
-
-    Get: Получить заказы покупателя.
-    Post: Оформить заказ из корзины и отправить письмо покупателю.
-    """
+    """Управление заказом покупателя."""
 
     permission_classes = [IsBuyerUser]
 
     def get(self, request, *args, **kwargs):
+        """Получает список заказов покупателя."""
         order = (
             Order.objects.filter(user_id=request.user.id)
             .exclude(state="basket")
@@ -661,6 +664,7 @@ class BuyerOrderView(views.APIView):
         return Response({"Status": True, "Orders": serializer.data})
 
     def post(self, request, *args, **kwargs):
+        """Создает новый заказ покупателя."""
         try:
             order = Order.objects.get(user_id=request.user.id, state="basket")
             if not order.ordered_items.exists():
@@ -758,6 +762,7 @@ class BuyerOrderView(views.APIView):
                 )
 
 
+@extend_schema(tags=["Заказы магазина"])
 class ShopOrderView(views.APIView):
     """Получение заказов магазина."""
 
@@ -781,18 +786,14 @@ class ShopOrderView(views.APIView):
         return Response({"Status": True, "Orders": serializer.data})
 
 
+@extend_schema(tags=["Продукт"])
 class ProductDetailView(views.APIView):
-    """
-    Управление продуктом.
-
-    Get: Получить продукт.
-    Post: Добавить продукт.
-    Patch: Изменить продукт c использованием Celery.
-    """
+    """Управление продуктом."""
 
     permission_classes = [IsShopUser]
 
     def get(self, request, *args, **kwargs):
+        """Получает информацию о продукте."""
         product_id = request.data.get("product_id")
 
         if not product_id or not product_id.isdigit():
@@ -813,6 +814,7 @@ class ProductDetailView(views.APIView):
         return Response({"Status": True, "Data": serializer.data})
 
     def post(self, request, *args, **kwargs):
+        """Создает продукт."""
         serializer = ProductWithImageSerializer(
             data=request.data, context={"request": request}
         )
@@ -828,6 +830,7 @@ class ProductDetailView(views.APIView):
         )
 
     def patch(self, request):
+        """Изменяет продукт."""
         product_id = request.data.get("product_id")
 
         if not product_id or not product_id.isdigit():
