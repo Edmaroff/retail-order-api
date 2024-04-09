@@ -42,12 +42,15 @@ jobs:
           python-version: 3.12
 
       - name: Установка зависимостей
+        working-directory: ./retail_order_api
         run: pip install -r requirements.txt
 
       - name: Линтинг
+        working-directory: ./retail_order_api
         run: flake8
 
       - name: Тесты
+        working-directory: ./retail_order_api
         run: pytest
 
         env:
