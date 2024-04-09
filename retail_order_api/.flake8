@@ -1,0 +1,14 @@
+[flake8]
+max-line-length = 88
+exclude =
+    .git,
+    __pycache__,
+    .tox,
+    .eggs,
+    *.egg,
+    venv
+    .env
+    .env.template
+    backend/migrations
+    backend/apps.py
+    retail_order_api/settings.py

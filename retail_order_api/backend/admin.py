@@ -149,7 +149,8 @@ class ProductAdmin(admin.ModelAdmin):
 
     def get_actions(self, request):
         """
-        Отключение массового удаления со страницы списка моделей для корректного вызова delete.
+        Отключение массового удаления со страницы списка моделей
+        для корректного вызова delete.
         """
         actions = super(self.__class__, self).get_actions(request)
         if "delete_selected" in actions:
