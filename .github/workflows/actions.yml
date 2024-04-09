@@ -42,13 +42,14 @@ jobs:
           python-version: 3.12
 
       - name: Установка зависимостей
-        run: pip install -r requirements.txt
+        run: pip install -r ./retail_order_api/requirements.txt
 
       - name: Линтинг
-        run: flake8
+        run: flake8 ./retail_order_api/
 
       - name: Тесты
-        run: pytest
+        run: pytest ./retail_order_api/
+
         env:
           SECRET_KEY: ${{ env.SECRET_KEY }}
           DEBUG: ${{ env.DEBUG }}
