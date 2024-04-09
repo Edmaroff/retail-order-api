@@ -53,8 +53,15 @@ jobs:
         working-directory: ./retail_order_api
         run: pytest
 
+      - name: Тесты_2
+#        working-directory: ./retail_order_api
+        run: python -m pytest --cov=./retail_order_api --cov-report xml
+
       - name: Coveralls
         uses: coverallsapp/github-action@v2
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          path--to-lcov: coverage.xml
 
 
         env:
