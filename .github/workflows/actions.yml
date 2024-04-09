@@ -53,6 +53,10 @@ jobs:
         working-directory: ./retail_order_api
         run: pytest
 
+      - name: Coveralls
+        uses: coverallsapp/github-action@v2
+
+
         env:
           SECRET_KEY: ${{ env.SECRET_KEY }}
           DEBUG: ${{ env.DEBUG }}
