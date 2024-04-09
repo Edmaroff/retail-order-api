@@ -55,7 +55,8 @@ class CustomProviderAuthView(ProviderAuthView):
         Получает URL для авторизации через социальную сеть.
 
         Изменения:
-        - Для получения redirect_uri используются настройки проекта вместо GET-параметров.
+        - Для получения redirect_uri используются
+        настройки проекта вместо GET-параметров.
         """
         redirect_uri = settings.DJOSER.get("SOCIAL_AUTH_ALLOWED_REDIRECT_URIS")[0]
         strategy = load_strategy(request)
@@ -95,7 +96,10 @@ class CeleryTaskResultView(views.APIView):
 
 @extend_schema(tags=["Магазин"])
 class ShopListView(generics.ListAPIView):
-    """Получение списка магазинов с пагинацией и фильтрацией с помощью GET-параметра search."""
+    """
+    Получение списка магазинов с пагинацией
+    и фильтрацией с помощью GET-параметра search.
+    """
 
     queryset = Shop.objects.filter(state=True)
     serializer_class = ShopListSerializer
@@ -106,7 +110,10 @@ class ShopListView(generics.ListAPIView):
 
 @extend_schema(tags=["Категории"])
 class CategoryListView(generics.ListAPIView):
-    """Получение списка категорий с пагинацией и фильтрацией с помощью GET-параметра search."""
+    """
+    Получение списка категорий с пагинацией
+    и фильтрацией с помощью GET-параметра search.
+    """
 
     queryset = Category.objects.all()
     serializer_class = CategoryListSerializer
@@ -411,7 +418,10 @@ class ProductInShopView(views.APIView, ProductPagination):
     permission_classes = [permissions.IsAuthenticated]
 
     def get(self, request, *args, **kwargs):
-        """Получение подробной информации о товарах в магазинах на основе заданных фильтров."""
+        """
+        Получение подробной информации о товарах в магазинах
+        на основе заданных фильтров.
+        """
         query = Q(shop__state=True)
 
         shop_id = request.query_params.get("shop_id")
@@ -569,7 +579,8 @@ class BuyerBasketView(views.APIView):
                     return Response(
                         {
                             "Status": False,
-                            "Errors": f"Товар с id {order_item_id} не найден в корзине.",
+                            "Errors": f"Товар с id {order_item_id} "
+                                      f"не найден в корзине.",
                         },
                         status=status.HTTP_404_NOT_FOUND,
                     )
@@ -583,7 +594,8 @@ class BuyerBasketView(views.APIView):
                             "Status": False,
                             "Errors": {
                                 "quantity": [
-                                    f"Превышено доступное количество товара — {available_quantity}."
+                                    f"Превышено доступное количество товара — "
+                                    f"{available_quantity}."
                                 ],
                                 "id": [order_item_id],
                             },
@@ -756,7 +768,8 @@ class BuyerOrderView(views.APIView):
                 return Response(
                     {
                         "Status": False,
-                        "Errors": "Товары в корзине закончились после проверки наличия в магазине.",
+                        "Errors": "Товары в корзине закончились "
+                                  "после проверки наличия в магазине.",
                     },
                     status=status.HTTP_400_BAD_REQUEST,
                 )

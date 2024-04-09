@@ -14,9 +14,11 @@ def custom_get_username(strategy, details, backend, user=None):
     Метод является модифицированной версией social_core.pipeline.user.get_username.
 
     Изменения:
-    - Добавлена проверка существования пользователя с таким же именем в таблице CustomUser.
+    - Добавлена проверка существования пользователя
+    с таким же именем в таблице CustomUser.
 
-    Используется для генерации уникального имени пользователя при регистрации через социальные сети.
+    Используется для генерации уникального имени пользователя
+    при регистрации через социальные сети.
     """
     if "username" not in backend.setting("USER_FIELDS", USER_FIELDS):
         return
@@ -75,12 +77,13 @@ def custom_get_username(strategy, details, backend, user=None):
 
 def custom_source_name_as_path(generator):
     """
-    Метод является модифицированной версией imagekit.cachefiles.namers.source_name_as_path.
+    Метод является модифицированной версией
+    imagekit.cachefiles.namers.source_name_as_path.
 
     Генерация пути к измененному файлу
 
     Пример исходного файла: images/products/nazvanie-produkta/Screenshot_1.jpg
-    Пример измененного файла: images/products/nazvanie-produkta/Screenshot_1/{width}x{height}.jpg,
+    Пример измененного файла: images/products/nazvanie/Screenshot_1/{width}x{height}.jpg
     где {width} и {height} - ширина и высота изображения.
     """
     source_filename = getattr(generator.source, "name", None)
@@ -105,7 +108,8 @@ def custom_source_name_as_path(generator):
 
 def get_path_upload_product_photo(instance, file):
     """
-    Построение пути к файлу, format: (media)/images/products/slug(product_name)/photo.jpg
+    Построение пути к файлу,
+    format: (media)/images/products/slug(product_name)/photo.jpg
     """
     return f"images/products/{instance.slug}/{file}"
 

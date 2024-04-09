@@ -536,7 +536,8 @@ class TestBuyerOrderView:
                 id=product_info_id
             ).quantity
             expected_updated_quantity = available_quantity - quantity_to_add
-            # Проверяем, что доступное количество товара уменьшилось на количество в заказе
+            # Проверяем, что доступное количество товара уменьшилось
+            # на количество товаров в заказе
             assert updated_available_quantity == expected_updated_quantity
 
     def test_post_no_available_products(self, contact_factory, add_products_with_state):
@@ -572,7 +573,8 @@ class TestBuyerOrderView:
         self, contact_factory, add_products_with_state
     ):
         """
-        Проверка создания заказа с количеством товаров в корзине больше, чем доступно у продавца.
+        Проверка создания заказа с количеством товаров в корзине больше,
+        чем доступно у продавца.
         """
         available_quantity = 10
         quantity_to_add = 15  # Добавляем больше товаров, чем доступно у продавца
@@ -593,7 +595,8 @@ class TestBuyerOrderView:
         # Получаем обновленные товары в заказе
         ordered_items = order.ordered_items.all()
 
-        # Проверяем, что количество товаров в заказе соответствует доступному количеству у продавца
+        # Проверяем, что количество товаров в заказе соответствует
+        # доступному количеству товаров у продавца
         for ordered_item in ordered_items:
             assert ordered_item.quantity == min(available_quantity, quantity_to_add)
 

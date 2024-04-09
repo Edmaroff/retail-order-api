@@ -120,7 +120,8 @@ class ProductWithImageSerializer(serializers.ModelSerializer):
             raise ValidationError("Изображение не было предоставлено.")
         if image.size > settings.IMAGE_MAX_SIZE_MB * 1024 * 1024:
             raise ValidationError(
-                f"Максимальный размер изображения равен {settings.IMAGE_MAX_SIZE_MB} МБ."
+                f"Максимальный размер изображения равен"
+                f" {settings.IMAGE_MAX_SIZE_MB} МБ."
             )
         extension = splitext(image.name)[1]
         if extension not in settings.WHITELISTED_IMAGE_TYPES.keys():
@@ -169,8 +170,8 @@ class OrderItemSerializer(serializers.ModelSerializer):
 
     def validate(self, data):
         """
-        Проверяет количество добавляемого в корзину продукта и доступное количество товара у
-        продавца.
+        Проверяет количество добавляемого в корзину продукта
+        и доступное количество товара у продавца.
         """
         requested_quantity = data.get("quantity", settings.DEFAULT_QUANTITY_ORDER_ITEM)
         available_quantity = data.get("product_info").quantity
@@ -178,7 +179,8 @@ class OrderItemSerializer(serializers.ModelSerializer):
         if requested_quantity > available_quantity:
             raise serializers.ValidationError(
                 {
-                    "quantity": f"Превышено доступное количество товара — {available_quantity}.",
+                    "quantity": f"Превышено доступное количество "
+                                f"товара — {available_quantity}.",
                     "product_info": data.get("product_info").pk,
                 }
             )

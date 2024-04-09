@@ -110,7 +110,8 @@ def delete_cached_files_celery(instance_id, app_label, model_name):
 #         stream = get(url).content
 #         data = load_yaml(stream, Loader=SafeLoader)
 #     except YAMLError:
-#         return {"Status": False, "Errors": "Ошибка при загрузке данных из файла YAML."}
+#         return {"Status": False, "Errors": "Ошибка при загрузке данных "
+#                                            "из файла YAML."}
 #     with transaction.atomic():
 #         try:
 #             # ОТЛАДКА - чтение файла с ПК
@@ -133,7 +134,8 @@ def delete_cached_files_celery(instance_id, app_label, model_name):
 #                 categories_data = data.get("categories", [])
 #                 print(categories_data)
 #                 for category_name in categories_data:
-#                     category_object, _ = Category.objects.get_or_create(name=category_name)
+#                     category_object, _ = Category.objects. \
+#                                             get_or_create(name=category_name)
 #                     category_object.shops.add(shop.id)
 #                     category_name_to_id[category_name] = category_object.id
 #
@@ -150,7 +152,8 @@ def delete_cached_files_celery(instance_id, app_label, model_name):
 #                         if product.category.name not in category_name_to_id:
 #                             product.category.shops.add(shop.id)
 #                     except Product.DoesNotExist:
-#                         category_id = category_name_to_id.get(product_data.get("category"))
+#                         category_id = category_name_to_id. \
+#                                         get(product_data.get("category"))
 #                         product = Product.objects.create(
 #                             name=product_data.get("name"), category_id=category_id
 #                         )
@@ -169,7 +172,8 @@ def delete_cached_files_celery(instance_id, app_label, model_name):
 #                     # Обработка параметров товара
 #                     parameters_data = product_data.get("parameters", {})
 #                     for param_name, param_value in parameters_data.items():
-#                         parameter, _ = Parameter.objects.get_or_create(name=param_name)
+#                         parameter, _ = Parameter.objects. \
+#                                         get_or_create(name=param_name)
 #                         ProductParameter.objects.create(
 #                             product_info_id=product_info.id,
 #                             parameter=parameter,
@@ -178,4 +182,5 @@ def delete_cached_files_celery(instance_id, app_label, model_name):
 #
 #                 return {"Status": True, "Message": "Магазин успешно обновлен."}
 #         except (IntegrityError, TypeError):
-#             return {"Status": False, "Errors": "Не указаны все необходимые аргументы."}
+#             return {"Status": False, "Errors": "Не указаны все "
+#                                                "необходимые аргументы."}
