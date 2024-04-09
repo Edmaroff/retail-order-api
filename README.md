@@ -1,3 +1,5 @@
+[![Coverage Status](https://coveralls.io/repos/github/Edmaroff/retail-order-api/badge.svg)](https://coveralls.io/github/Edmaroff/retail-order-api)
+
 <h1>API Сервис заказа товаров для розничных сетей</h1>
 
 <hr>
