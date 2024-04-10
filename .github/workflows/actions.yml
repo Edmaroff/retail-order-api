@@ -1,0 +1,74 @@
+name: Linting and Testing
+
+on:
+  push:
+    branches: [main, dev]
+  pull_request:
+    branches: [main]
+
+jobs:
+  tests:
+    runs-on: ubuntu-22.04
+    env:
+      SECRET_KEY: ${{ secrets.SECRET_KEY }}
+      DEBUG: ${{ secrets.DEBUG }}
+      ALLOWED_HOSTS: ${{ secrets.ALLOWED_HOSTS }}
+      POSTGRES_ENGINE: ${{ secrets.POSTGRES_ENGINE }}
+      POSTGRES_DB: ${{ secrets.POSTGRES_DB }}
+      POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+      POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+      POSTGRES_HOST: ${{ secrets.POSTGRES_HOST }}
+      POSTGRES_PORT: ${{ secrets.POSTGRES_PORT }}
+    services:
+      postgesql_main:
+        image: postgres:12
+        env:
+          POSTGRES_DB: ${{ env.POSTGRES_DB}}
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+        ports:
+          - 5432:5432
+        options:
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - name: Проверка репозитория на изменения
+        uses: actions/checkout@v4
+
+      - name: Установка python
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.12
+
+      - name: Установка зависимостей
+        working-directory: ./retail_order_api
+        run: pip install -r requirements.txt
+
+      - name: Линтинг
+        working-directory: ./retail_order_api
+        run: flake8
+
+      - name: Тестирование
+        working-directory: ./retail_order_api
+        run: pytest  -v --cov=. --cov-report lcov:./lcov.info
+
+      - name: Coveralls
+        uses: coverallsapp/github-action@v2.2.3
+        with:
+          base-path: ./retail_order_api
+          file: ./retail_order_api/lcov.info
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+        env:
+          SECRET_KEY: ${{ env.SECRET_KEY }}
+          DEBUG: ${{ env.DEBUG }}
+          ALLOWED_HOSTS: ${{ env.ALLOWED_HOSTS }}
+          POSTGRES_ENGINE: ${{ env.POSTGRES_ENGINE }}
+          POSTGRES_DB: ${{ env.POSTGRES_DB }}
+          POSTGRES_USER: ${{ env.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ env.POSTGRES_PASSWORD }}
+          POSTGRES_HOST: ${{ env.POSTGRES_HOST}}
+          POSTGRES_PORT: ${{ env.POSTGRES_PORT }}

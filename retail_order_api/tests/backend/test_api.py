@@ -385,9 +385,6 @@ class TestProductDetailView:
         self.assert_response(response, expected_product_info_ids)
 
 
-# -----------------------------------------------------
-
-
 @pytest.mark.django_db
 class TestBuyerBasketView:
     """Тесты для BuyerBasketView."""
