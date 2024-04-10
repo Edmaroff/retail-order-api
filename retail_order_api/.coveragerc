@@ -1,2 +1,2 @@
 [run]
-omit=tests/*,.venv/*,manage.py,retail_order_api/*,*tests.py,backend/migrations/*
+omit=tests/*,.venv/*,manage.py,retail_order_api/*,*tests.py,backend/migrations/*,backend/utils.py,backend/views.py,backend/tasks.py

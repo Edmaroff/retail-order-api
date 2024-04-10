@@ -1,3 +1,4 @@
+<a href="https://github.com/Edmaroff/retail-order-api/actions/workflows/actions.yml"><img src="https://github.com/Edmaroff/retail-order-api/actions/workflows/actions.yml/badge.svg?branch=dev" alt="GitHub Actions"/></a>
 <a href='https://coveralls.io/github/Edmaroff/retail-order-api?branch=dev'><img src='https://coveralls.io/repos/github/Edmaroff/retail-order-api/badge.svg?branch=dev' alt='Coverage Status' /></a>
 
 <h1>API Сервис заказа товаров для розничных сетей</h1>
