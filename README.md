@@ -1,5 +1,9 @@
-<a href="https://github.com/Edmaroff/retail-order-api/actions/workflows/actions.yml"><img src="https://github.com/Edmaroff/retail-order-api/actions/workflows/actions.yml/badge.svg?branch=dev" alt="GitHub Actions"/></a>
-<a href='https://coveralls.io/github/Edmaroff/retail-order-api?branch=dev'><img src='https://coveralls.io/repos/github/Edmaroff/retail-order-api/badge.svg?branch=dev' alt='Coverage Status' /></a>
+<a href="https://github.com/Edmaroff/retail-order-api/actions/workflows/actions.yml"><img src="https://github.com/Edmaroff/retail-order-api/actions/workflows/actions.yml/badge.svg?" alt="GitHub Actions"/></a>
+<a href='https://coveralls.io/github/Edmaroff/retail-order-api?'><img src='https://coveralls.io/repos/github/Edmaroff/retail-order-api/badge.svg?branch=dev' alt='Coverage Status' /></a>
+<a href="https://documenter.getpostman.com/view/25907870/2s9Ykn92Za"><img src="https://img.shields.io/badge/API docs-latest-blue.svg" alt="API Docs"/></a>
+<img src="https://img.shields.io/badge/python-3.12-blue" alt="Python version"/>
+<img src="https://img.shields.io/badge/django-5.0-blue" alt="Django Version"/>
+<img src="https://img.shields.io/badge/Django%20REST%20framework-3.15-blue" alt="Django REST Framework Version"/>
 
 <h1>API Сервис заказа товаров для розничных сетей</h1>
 
