@@ -51,7 +51,7 @@ jobs:
 
       - name: Тестирование
         working-directory: ./retail_order_api
-        run: python -m pytest --cov=. --cov-report xml
+        run: python -m pytest --cov=.
 
 
       - name: Coveralls
