@@ -49,9 +49,9 @@ jobs:
         working-directory: ./retail_order_api
         run: flake8
 
-      - name: Тесты
-        working-directory: ./retail_order_api
-        run: pytest
+#      - name: Тесты
+#        working-directory: ./retail_order_api
+#        run: pytest
 
       - name: Тесты_2
         working-directory: ./retail_order_api

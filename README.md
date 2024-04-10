@@ -1,4 +1,4 @@
-[![Coverage Status](https://coveralls.io/repos/github/Edmaroff/retail-order-api/badge.svg)](https://coveralls.io/github/Edmaroff/retail-order-api)
+<a href='https://coveralls.io/github/Edmaroff/retail-order-api'><img src='https://coveralls.io/repos/github/Edmaroff/retail-order-api/badge.svg' alt='Coverage Status' /></a>
 
 <h1>API Сервис заказа товаров для розничных сетей</h1>
 
