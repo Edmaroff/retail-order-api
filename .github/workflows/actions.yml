@@ -53,9 +53,9 @@ jobs:
 #        working-directory: ./retail_order_api
 #        run: pytest
 
-      - name: Тесты_2
+      - name: Тестирование
         working-directory: ./retail_order_api
-        run: python -m pytest --cov=. --cov-report xml
+        run: python -m pytest --cov=.
 
       - name: Coveralls
         uses: coverallsapp/github-action@v2
