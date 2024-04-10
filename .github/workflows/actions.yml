@@ -1,4 +1,4 @@
-name: Тестирование и линтинг
+name: Linting and Testing
 
 on:
   push:
@@ -59,7 +59,7 @@ jobs:
         uses: coverallsapp/github-action@v2.2.3
         with:
           base-path: ./retail_order_api
-          file: ./lcov.info
+          file: lcov.info
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
         env:
