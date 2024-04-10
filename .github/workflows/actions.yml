@@ -52,14 +52,14 @@ jobs:
       - name: Тестирование
         working-directory: ./retail_order_api
 #        run: python -m pytest --cov=.
-        run: pytest  -v --cov=. --cov-report lcov:lcov.info
+        run: pytest  -v --cov=. --cov-report lcov:./lcov.info
 
 
       - name: Coveralls
         uses: coverallsapp/github-action@v2.2.3
         with:
           base-path: ./retail_order_api
-          file: lcov.info
+          file: ./lcov.info
           github-token: ${{ secrets.GITHUB_TOKEN }}
 
         env:
